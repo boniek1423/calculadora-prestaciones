@@ -3,45 +3,36 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Laboral Pro - Venezuela</title>
+    <title>Calculadora Laboral Total - Venezuela</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         :root { --primary-blue: #00247d; --ven-yellow: #ffcc00; }
-        body { background-color: #f4f7f6; font-family: 'Segoe UI', sans-serif; }
+        body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .card { border: none; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
         .card-header { background-color: var(--primary-blue); color: white; border-radius: 20px 20px 0 0 !important; }
         .res-box { background: #fff; border-radius: 15px; padding: 20px; border-left: 5px solid var(--primary-blue); }
-        .total-highlight { font-size: 2.2rem; color: #198754; font-weight: bold; }
+        .total-highlight { font-size: 2rem; color: #198754; font-weight: bold; }
         .section-title { color: var(--primary-blue); font-weight: bold; border-bottom: 2px solid var(--ven-yellow); display: inline-block; margin-bottom: 15px; }
-        @media print { .no-print { display: none; } }
     </style>
 </head>
 <body>
 
-<div class="container py-5" id="contenido-pdf">
+<div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-lg-11">
-            <div class="card shadow">
+            <div class="card">
                 <div class="card-header p-4 text-center">
-                    <h2 class="mb-0">Calculadora de Liquidación Integral (LOTTT)</h2>
-                    <small>Versión 2026 | Venezuela</small>
+                    <h2 class="mb-0">Calculadora de Liquidación Integral</h2>
+                    <small>Prestaciones + Adicionales + Domingos y Feriados</small>
                 </div>
                 <div class="card-body p-4">
-                    <form id="masterForm" class="no-print">
+                    <form id="masterForm">
                         <div class="row g-4">
                             <div class="col-md-4">
-                                <h6 class="section-title">1. Salario y Bonos</h6>
+                                <h6 class="section-title">1. Salario y Alícuotas</h6>
                                 <div class="mb-3">
-                                    <label class="form-label small fw-bold">Sueldo Base Mensual ($)</label>
-                                    <input type="number" id="sueldo" class="form-control" value="200" required>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label small fw-bold">Jornada Nocturna</label>
-                                    <select id="nocturno" class="form-select">
-                                        <option value="1.0">No (Diurno)</option>
-                                        <option value="1.30">Sí (Recargo 30%)</option>
-                                    </select>
+                                    <label class="form-label small fw-bold">Salario Mensual Base ($.)</label>
+                                    <input type="number" id="sueldo" class="form-control" placeholder="0.00" required>
                                 </div>
                                 <div class="row">
                                     <div class="col-6">
@@ -59,39 +50,37 @@
                                 <h6 class="section-title">2. Relación Laboral</h6>
                                 <div class="mb-3">
                                     <label class="form-label small fw-bold">Fecha de Ingreso</label>
-                                    <input type="date" id="fIngreso" class="form-control" value="2023-09-06" required>
+                                    <input type="date" id="fIngreso" class="form-control" required>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label small fw-bold">Fecha de Egreso</label>
-                                    <input type="date" id="fEgreso" class="form-control" value="2026-01-30" required>
+                                    <input type="date" id="fEgreso" class="form-control" required>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label small fw-bold">Motivo</label>
                                     <select id="motivo" class="form-select">
                                         <option value="renuncia">Renuncia Voluntaria</option>
-                                        <option value="despido">Despido Injustificado (Doble)</option>
+                                        <option value="despido">Despido Injustificado</option>
                                     </select>
                                 </div>
                             </div>
 
                             <div class="col-md-4">
-                                <h6 class="section-title">3. Extras No Pagados</h6>
+                                <h6 class="section-title">3. Domingos y Feriados</h6>
                                 <div class="mb-3">
-                                    <label class="form-label small fw-bold">Domingos Trabajados</label>
+                                    <label class="form-label small fw-bold">Domingos No Pagados</label>
                                     <input type="number" id="domingos" class="form-control" value="0">
+                                    <small class="text-muted">Días de descanso trabajados y no cobrados.</small>
                                 </div>
                                 <div class="mb-3">
-                                    <label class="form-label small fw-bold">Feriados Trabajados</label>
+                                    <label class="form-label small fw-bold">Feriados No Pagados</label>
                                     <input type="number" id="feriados" class="form-control" value="0">
                                 </div>
                             </div>
 
-                            <div class="col-12 mt-4 text-center no-print">
-                                <button type="button" onclick="calcularTotal()" class="btn btn-primary btn-lg px-4 rounded-pill shadow">
-                                    Calcular Liquidación
-                                </button>
-                                <button type="button" id="btnPDF" onclick="generarPDF()" class="btn btn-outline-dark btn-lg px-4 rounded-pill shadow ms-2 d-none">
-                                    Descargar PDF
+                            <div class="col-12 mt-4 text-center">
+                                <button type="button" onclick="calcularTotal()" class="btn btn-primary btn-lg px-5 rounded-pill shadow">
+                                    Calcular Liquidación Final
                                 </button>
                             </div>
                         </div>
@@ -99,21 +88,21 @@
 
                     <div id="resultados" class="mt-5 d-none">
                         <div class="res-box shadow-sm">
-                            <div class="row align-items-center">
+                            <div class="row">
                                 <div class="col-md-7">
-                                    <h5 class="text-primary mb-3">Detalle del Cálculo</h5>
-                                    <table class="table table-hover">
-                                        <tr><td>Salario Normal (c/ Nocturno):</td><td class="text-end fw-bold" id="outNormal"></td></tr>
+                                    <h5 class="text-primary mb-3">Detalle Técnico</h5>
+                                    <table class="table table-sm">
                                         <tr><td>Salario Integral Diario:</td><td class="text-end fw-bold" id="outIntegral"></td></tr>
-                                        <tr><td>Tiempo de Servicio:</td><td class="text-end fw-bold" id="outTiempo"></td></tr>
-                                        <tr><td>Días Totales de Prestaciones:</td><td class="text-end fw-bold" id="outDiasBase"></td></tr>
-                                        <tr><td>Extras (Domingos/Feriados):</td><td class="text-end fw-bold" id="outMontoExtras"></td></tr>
+                                        <tr><td>Tiempo Total:</td><td class="text-end fw-bold" id="outTiempo"></td></tr>
+                                        <tr><td>Días Acumulados (Base + Meses):</td><td class="text-end fw-bold" id="outDiasBase"></td></tr>
+                                        <tr><td>Días Adicionales (2 por año):</td><td class="text-end fw-bold text-success" id="outDiasAdic"></td></tr>
+                                        <tr><td>Monto por Descansos/Feriados:</td><td class="text-end fw-bold" id="outMontoExtras"></td></tr>
                                     </table>
-                                    <div id="notaSobreTiempo" class="alert alert-info py-2 small"></div>
                                 </div>
-                                <div class="col-md-5 text-center border-start">
-                                    <p class="mb-1 fw-bold text-muted">SUB-TOTAL PRESTACIONES</p>
+                                <div class="col-md-5 text-center border-start d-flex flex-column justify-content-center">
+                                    <p class="mb-1 fw-bold text-muted">PRESTACIONES + EXTRAS</p>
                                     <h4 id="outSubtotal"></h4>
+                                    
                                     <div id="areaIndem" class="d-none">
                                         <p class="mb-1 fw-bold text-danger">INDEMNIZACIÓN (ART. 92)</p>
                                         <h4 id="outIndem" class="text-danger"></h4>
@@ -121,7 +110,6 @@
                                     <hr>
                                     <p class="mb-0 fw-bold">NETO A RECIBIR:</p>
                                     <div class="total-highlight" id="outTotal"></div>
-                                    <small class="text-muted">Monto expresado en Divisas ($)</small>
                                 </div>
                             </div>
                         </div>
@@ -134,96 +122,68 @@
 
 <script>
 function calcularTotal() {
-    const sueldo = parseFloat(document.getElementById('sueldo').value) || 0;
-    const factorNocturno = parseFloat(document.getElementById('nocturno').value) || 1.0;
-    const dUtil = parseFloat(document.getElementById('diasUtil').value) || 30;
-    const dVac = parseFloat(document.getElementById('diasVac').value) || 15;
+    // Captura
+    const sueldo = parseFloat(document.getElementById('sueldo').value);
+    const dUtil = parseFloat(document.getElementById('diasUtil').value);
+    const dVac = parseFloat(document.getElementById('diasVac').value);
     const fIng = new Date(document.getElementById('fIngreso').value);
     const fEgr = new Date(document.getElementById('fEgreso').value);
     const motivo = document.getElementById('motivo').value;
     const domingos = parseInt(document.getElementById('domingos').value) || 0;
     const feriados = parseInt(document.getElementById('feriados').value) || 0;
 
-    if (isNaN(sueldo) || isNaN(fIng.getTime()) || isNaN(fEgr.getTime())) {
-        return alert("Por favor, complete los datos obligatorios.");
-    }
+    if (isNaN(sueldo) || isNaN(fIng.getTime())) return alert("Complete los datos básicos.");
 
-    // 1. Salarios
-    const salarioNormalDiario = (sueldo / 30) * factorNocturno;
-    const aliUtil = (salarioNormalDiario * dUtil) / 360;
-    const aliVac = (salarioNormalDiario * dVac) / 360;
-    const salarioIntegralDiario = salarioNormalDiario + aliUtil + aliVac;
+    // 1. Salario Integral (Base para Prestaciones)
+    const diarioBase = sueldo / 30;
+    const alicuotaUtil = (diarioBase * dUtil) / 360;
+    const alicuotaVac = (diarioBase * dVac) / 360;
+    const salarioIntegral = diarioBase + alicuotaUtil + alicuotaVac;
 
     // 2. Tiempo exacto
-    let diffMs = fEgr - fIng;
-    let diasTotalesSrv = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    let anos = Math.floor(diasTotalesSrv / 365);
-    let mesesFraccion = Math.floor((diasTotalesSrv % 365) / 30);
+    let anos = fEgr.getFullYear() - fIng.getFullYear();
+    let meses = fEgr.getMonth() - fIng.getMonth();
+    if (meses < 0) { anos--; meses += 12; }
 
-    // 3. Lógica de Días Acumulados Progresivos (60, 62, 64...)
-    let diasDerecho = 0;
-    let desglose = "";
-
-    // Años Completos
-    for (let i = 1; i <= anos; i++) {
-        let adicionales = (i > 1) ? Math.min((i - 1) * 2, 30) : 0;
-        let diasAno = 60 + adicionales;
-        diasDerecho += diasAno;
-        desglose += `Año ${i}: ${diasAno}d. `;
+    // 3. Cálculo de Días
+    // 60 por cada año + 5 por cada mes adicional
+    const diasBaseYMeses = (anos * 60) + (meses * 5);
+    
+    // 2 días adicionales por año a partir del 2do año
+    let diasAdic = 0;
+    if (anos >= 2) {
+        diasAdic = (anos - 1) * 2;
+        if (diasAdic > 30) diasAdic = 30;
     }
 
-    // Lógica de Fracción Final
-    if (mesesFraccion >= 6) {
-        let proxAno = anos + 1;
-        let adicionalesProx = Math.min((proxAno - 1) * 2, 30);
-        let diasProx = 60 + adicionalesProx;
-        diasDerecho += diasProx;
-        desglose += `| Fracción ≥ 6 meses: Año ${proxAno} completo (${diasProx}d).`;
-    } else {
-        let diasPorMeses = mesesFraccion * 5;
-        diasDerecho += diasPorMeses;
-        desglose += `| Fracción < 6 meses: ${mesesFraccion} meses x 5 días = ${diasPorMeses}d.`;
-    }
+    // 4. Domingos y Feriados (Se pagan a salario diario normal o integral según criterio)
+    // Aquí usaremos salario diario normal con recargo de ley del 50% por ser días trabajados no pagados
+    const montoExtras = (domingos + feriados) * (diarioBase * 1.5);
 
-    // 4. Extras y Totales
-    const montoExtras = (domingos + feriados) * (salarioNormalDiario * 1.5);
-    const montoPrestaciones = diasDerecho * salarioIntegralDiario;
+    // 5. Totales
+    const montoPrestaciones = (diasBaseYMeses + diasAdic) * salarioIntegral;
     let montoIndem = (motivo === 'despido') ? montoPrestaciones : 0;
     const totalFinal = montoPrestaciones + montoIndem + montoExtras;
 
-    // 5. Mostrar Resultados
+    // Mostrar
     document.getElementById('resultados').classList.remove('d-none');
-    document.getElementById('btnPDF').classList.remove('d-none');
-    
-    document.getElementById('outNormal').innerText = `$ ${ (salarioNormalDiario * 30).toFixed(2) }`;
-    document.getElementById('outIntegral').innerText = `$ ${ salarioIntegralDiario.toFixed(2) }`;
-    document.getElementById('outTiempo').innerText = `${anos} años, ${mesesFraccion} meses`;
-    document.getElementById('outDiasBase').innerText = `${diasDerecho} días`;
-    document.getElementById('outMontoExtras').innerText = `$ ${montoExtras.toFixed(2)}`;
-    document.getElementById('outSubtotal').innerText = `$ ${montoPrestaciones.toFixed(2)}`;
-    document.getElementById('notaSobreTiempo').innerText = desglose;
+    document.getElementById('outIntegral').innerText = salarioIntegral.toFixed(2) + " $.";
+    document.getElementById('outTiempo').innerText = `${anos} años, ${meses} meses`;
+    document.getElementById('outDiasBase').innerText = diasBaseYMeses + " días";
+    document.getElementById('outDiasAdic').innerText = diasAdic + " días";
+    document.getElementById('outMontoExtras').innerText = montoExtras.toLocaleString('es-VE') + " $.";
+    document.getElementById('outSubtotal').innerText = montoPrestaciones.toLocaleString('es-VE') + " $.";
     
     if (montoIndem > 0) {
         document.getElementById('areaIndem').classList.remove('d-none');
-        document.getElementById('outIndem').innerText = `$ ${montoIndem.toFixed(2)}`;
+        document.getElementById('outIndem').innerText = montoIndem.toLocaleString('es-VE') + "$.";
     } else {
         document.getElementById('areaIndem').classList.add('d-none');
     }
 
-    document.getElementById('outTotal').innerText = `$ ${totalFinal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-}
-
-function generarPDF() {
-    const elemento = document.getElementById('contenido-pdf');
-    const opt = {
-        margin: 0.5,
-        filename: 'Liquidacion_LOTTT_Forum_2026.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-    html2pdf().set(opt).from(elemento).save();
+    document.getElementById('outTotal').innerText = totalFinal.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " Bs.";
 }
 </script>
+
 </body>
 </html>
