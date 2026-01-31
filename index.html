@@ -14,7 +14,6 @@
         .res-box { background: #fff; border-radius: 15px; padding: 20px; border-left: 5px solid var(--primary-blue); }
         .total-highlight { font-size: 2.2rem; color: #198754; font-weight: bold; }
         .section-title { color: var(--primary-blue); font-weight: bold; border-bottom: 2px solid var(--ven-yellow); display: inline-block; margin-bottom: 15px; }
-        .badge-info { background-color: #e3f2fd; color: #004a99; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; }
         @media print { .no-print { display: none; } }
     </style>
 </head>
@@ -23,7 +22,7 @@
 <div class="container py-5" id="contenido-pdf">
     <div class="row justify-content-center">
         <div class="col-lg-11">
-            <div class="card">
+            <div class="card shadow">
                 <div class="card-header p-4 text-center">
                     <h2 class="mb-0">Calculadora de Liquidación Integral (LOTTT)</h2>
                     <small>Versión 2026 | Venezuela</small>
@@ -40,7 +39,7 @@
                                 <div class="mb-3">
                                     <label class="form-label small fw-bold">Jornada Nocturna</label>
                                     <select id="nocturno" class="form-select">
-                                        <option value="0">No (Diurno)</option>
+                                        <option value="1.0">No (Diurno)</option>
                                         <option value="1.30">Sí (Recargo 30%)</option>
                                     </select>
                                 </div>
@@ -70,7 +69,7 @@
                                     <label class="form-label small fw-bold">Motivo</label>
                                     <select id="motivo" class="form-select">
                                         <option value="renuncia">Renuncia Voluntaria</option>
-                                        <option value="despido">Despido Injustificado</option>
+                                        <option value="despido">Despido Injustificado (Doble)</option>
                                     </select>
                                 </div>
                             </div>
@@ -87,7 +86,7 @@
                                 </div>
                             </div>
 
-                            <div class="col-12 mt-4 text-center">
+                            <div class="col-12 mt-4 text-center no-print">
                                 <button type="button" onclick="calcularTotal()" class="btn btn-primary btn-lg px-4 rounded-pill shadow">
                                     Calcular Liquidación
                                 </button>
@@ -102,27 +101,27 @@
                         <div class="res-box shadow-sm">
                             <div class="row align-items-center">
                                 <div class="col-md-7">
-                                    <h5 class="text-primary mb-3">Reporte Detallado</h5>
+                                    <h5 class="text-primary mb-3">Detalle del Cálculo</h5>
                                     <table class="table table-hover">
-                                        <tr><td>Salario Diario Normal:</td><td class="text-end fw-bold" id="outNormal"></td></tr>
+                                        <tr><td>Salario Normal (c/ Nocturno):</td><td class="text-end fw-bold" id="outNormal"></td></tr>
                                         <tr><td>Salario Integral Diario:</td><td class="text-end fw-bold" id="outIntegral"></td></tr>
-                                        <tr><td>Tiempo Total:</td><td class="text-end fw-bold" id="outTiempo"></td></tr>
-                                        <tr><td>Días Base Cálculo:</td><td class="text-end fw-bold" id="outDiasBase"></td></tr>
-                                        <tr><td>Domingos/Feriados:</td><td class="text-end fw-bold" id="outMontoExtras"></td></tr>
+                                        <tr><td>Tiempo de Servicio:</td><td class="text-end fw-bold" id="outTiempo"></td></tr>
+                                        <tr><td>Días Totales de Prestaciones:</td><td class="text-end fw-bold" id="outDiasBase"></td></tr>
+                                        <tr><td>Extras (Domingos/Feriados):</td><td class="text-end fw-bold" id="outMontoExtras"></td></tr>
                                     </table>
                                     <div id="notaSobreTiempo" class="alert alert-info py-2 small"></div>
                                 </div>
                                 <div class="col-md-5 text-center border-start">
-                                    <p class="mb-1 fw-bold text-muted">TOTAL PRESTACIONES</p>
+                                    <p class="mb-1 fw-bold text-muted">SUB-TOTAL PRESTACIONES</p>
                                     <h4 id="outSubtotal"></h4>
                                     <div id="areaIndem" class="d-none">
-                                        <p class="mb-1 fw-bold text-danger">INDEMNIZACIÓN (DOBLETE)</p>
+                                        <p class="mb-1 fw-bold text-danger">INDEMNIZACIÓN (ART. 92)</p>
                                         <h4 id="outIndem" class="text-danger"></h4>
                                     </div>
                                     <hr>
-                                    <p class="mb-0 fw-bold">TOTAL NETO:</p>
+                                    <p class="mb-0 fw-bold">NETO A RECIBIR:</p>
                                     <div class="total-highlight" id="outTotal"></div>
-                                    <small class="text-muted">Calculado según LOTTT Art. 142</small>
+                                    <small class="text-muted">Monto expresado en Divisas ($)</small>
                                 </div>
                             </div>
                         </div>
@@ -135,75 +134,93 @@
 
 <script>
 function calcularTotal() {
-    // Captura
-    const sueldo = parseFloat(document.getElementById('sueldo').value);
-    const dUtil = parseFloat(document.getElementById('diasUtil').value);
-    const dVac = parseFloat(document.getElementById('diasVac').value);
+    const sueldo = parseFloat(document.getElementById('sueldo').value) || 0;
+    const factorNocturno = parseFloat(document.getElementById('nocturno').value) || 1.0;
+    const dUtil = parseFloat(document.getElementById('diasUtil').value) || 30;
+    const dVac = parseFloat(document.getElementById('diasVac').value) || 15;
     const fIng = new Date(document.getElementById('fIngreso').value);
     const fEgr = new Date(document.getElementById('fEgreso').value);
     const motivo = document.getElementById('motivo').value;
     const domingos = parseInt(document.getElementById('domingos').value) || 0;
     const feriados = parseInt(document.getElementById('feriados').value) || 0;
 
-    if (isNaN(sueldo) || isNaN(fIng.getTime())) return alert("Complete los datos básicos.");
-
-    // 1. Salario Integral (Base para Prestaciones)
-    const diarioBase = sueldo / 30;
-    const alicuotaUtil = (diarioBase * dUtil) / 360;
-    const alicuotaVac = (diarioBase * dVac) / 360;
-    const salarioIntegral = diarioBase + alicuotaUtil + alicuotaVac;
-
-    // 2. Tiempo exacto
-    let anos = fEgr.getFullYear() - fIng.getFullYear();
-    let meses = fEgr.getMonth() - fIng.getMonth();
-    if (meses < 0) { anos--; meses += 12; }
-
-    // 3. Cálculo de Días
-    // 60 por cada año + 5 por cada mes adicional
-    const diasBaseYMeses = (anos * 60) + (meses * 5);
-    
-    // 2 días adicionales por año a partir del 2do año
-    let diasAdic = 0;
-    if (anos >= 2) {
-        diasAdic = (anos - 1) * 2;
-        if (diasAdic > 30) diasAdic = 30;
+    if (isNaN(sueldo) || isNaN(fIng.getTime()) || isNaN(fEgr.getTime())) {
+        return alert("Por favor, complete los datos obligatorios.");
     }
 
-    // 4. Domingos y Feriados (Se pagan a salario diario normal o integral según criterio)
-    // Aquí usaremos salario diario normal con recargo de ley del 50% por ser días trabajados no pagados
-    const montoExtras = (domingos + feriados) * (diarioBase * 1.5);
+    // 1. Salarios
+    const salarioNormalDiario = (sueldo / 30) * factorNocturno;
+    const aliUtil = (salarioNormalDiario * dUtil) / 360;
+    const aliVac = (salarioNormalDiario * dVac) / 360;
+    const salarioIntegralDiario = salarioNormalDiario + aliUtil + aliVac;
 
-    // 5. Totales
-    const montoPrestaciones = (diasBaseYMeses + diasAdic) * salarioIntegral;
+    // 2. Tiempo exacto
+    let diffMs = fEgr - fIng;
+    let diasTotalesSrv = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    let anos = Math.floor(diasTotalesSrv / 365);
+    let mesesFraccion = Math.floor((diasTotalesSrv % 365) / 30);
+
+    // 3. Lógica de Días Acumulados Progresivos (60, 62, 64...)
+    let diasDerecho = 0;
+    let desglose = "";
+
+    // Años Completos
+    for (let i = 1; i <= anos; i++) {
+        let adicionales = (i > 1) ? Math.min((i - 1) * 2, 30) : 0;
+        let diasAno = 60 + adicionales;
+        diasDerecho += diasAno;
+        desglose += `Año ${i}: ${diasAno}d. `;
+    }
+
+    // Lógica de Fracción Final
+    if (mesesFraccion >= 6) {
+        let proxAno = anos + 1;
+        let adicionalesProx = Math.min((proxAno - 1) * 2, 30);
+        let diasProx = 60 + adicionalesProx;
+        diasDerecho += diasProx;
+        desglose += `| Fracción ≥ 6 meses: Año ${proxAno} completo (${diasProx}d).`;
+    } else {
+        let diasPorMeses = mesesFraccion * 5;
+        diasDerecho += diasPorMeses;
+        desglose += `| Fracción < 6 meses: ${mesesFraccion} meses x 5 días = ${diasPorMeses}d.`;
+    }
+
+    // 4. Extras y Totales
+    const montoExtras = (domingos + feriados) * (salarioNormalDiario * 1.5);
+    const montoPrestaciones = diasDerecho * salarioIntegralDiario;
     let montoIndem = (motivo === 'despido') ? montoPrestaciones : 0;
     const totalFinal = montoPrestaciones + montoIndem + montoExtras;
 
-    // Mostrar
+    // 5. Mostrar Resultados
     document.getElementById('resultados').classList.remove('d-none');
-    document.getElementById('outIntegral').innerText = salarioIntegral.toFixed(2) + " $.";
-    document.getElementById('outTiempo').innerText = `${anos} años, ${meses} meses`;
-    document.getElementById('outDiasBase').innerText = diasBaseYMeses + " días";
-    document.getElementById('outDiasAdic').innerText = diasAdic + " días";
-    document.getElementById('outMontoExtras').innerText = montoExtras.toLocaleString('es-VE') + " $.";
-    document.getElementById('outSubtotal').innerText = montoPrestaciones.toLocaleString('es-VE') + " $.";
+    document.getElementById('btnPDF').classList.remove('d-none');
+    
+    document.getElementById('outNormal').innerText = `$ ${ (salarioNormalDiario * 30).toFixed(2) }`;
+    document.getElementById('outIntegral').innerText = `$ ${ salarioIntegralDiario.toFixed(2) }`;
+    document.getElementById('outTiempo').innerText = `${anos} años, ${mesesFraccion} meses`;
+    document.getElementById('outDiasBase').innerText = `${diasDerecho} días`;
+    document.getElementById('outMontoExtras').innerText = `$ ${montoExtras.toFixed(2)}`;
+    document.getElementById('outSubtotal').innerText = `$ ${montoPrestaciones.toFixed(2)}`;
+    document.getElementById('notaSobreTiempo').innerText = desglose;
     
     if (montoIndem > 0) {
         document.getElementById('areaIndem').classList.remove('d-none');
-        document.getElementById('outIndem').innerText = montoIndem.toLocaleString('es-VE') + "$.";
+        document.getElementById('outIndem').innerText = `$ ${montoIndem.toFixed(2)}`;
     } else {
         document.getElementById('areaIndem').classList.add('d-none');
     }
 
-    document.getElementById('outTotal').innerText = totalFinal.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " Bs.";
+    document.getElementById('outTotal').innerText = `$ ${totalFinal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
 }
+
 function generarPDF() {
     const elemento = document.getElementById('contenido-pdf');
     const opt = {
-        margin:       0.5,
-        filename:     'Liquidacion_LOTTT_2026.pdf',
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2 },
-        jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+        margin: 0.5,
+        filename: 'Liquidacion_LOTTT_Forum_2026.pdf',
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
     html2pdf().set(opt).from(elemento).save();
 }
