@@ -135,63 +135,66 @@
 
 <script>
 function calcularTotal() {
-    const sueldoBase = parseFloat(document.getElementById('sueldo').value) || 0;
-    const factorNocturno = parseFloat(document.getElementById('nocturno').value) || 1;
-    const dUtil = parseFloat(document.getElementById('diasUtil').value) || 30;
-    const dVac = parseFloat(document.getElementById('diasVac').value) || 15;
+    // Captura
+    const sueldo = parseFloat(document.getElementById('sueldo').value);
+    const dUtil = parseFloat(document.getElementById('diasUtil').value);
+    const dVac = parseFloat(document.getElementById('diasVac').value);
     const fIng = new Date(document.getElementById('fIngreso').value);
     const fEgr = new Date(document.getElementById('fEgreso').value);
     const motivo = document.getElementById('motivo').value;
+    const domingos = parseInt(document.getElementById('domingos').value) || 0;
+    const feriados = parseInt(document.getElementById('feriados').value) || 0;
 
-    // 1. Salarios
-    const salarioNormalDiario = (sueldoBase / 30) * (factorNocturno > 1 ? factorNocturno : 1);
-    const salarioIntegralDiario = salarioNormalDiario + ((salarioNormalDiario * dUtil) / 360) + ((salarioNormalDiario * dVac) / 360);
+    if (isNaN(sueldo) || isNaN(fIng.getTime())) return alert("Complete los datos básicos.");
+
+    // 1. Salario Integral (Base para Prestaciones)
+    const diarioBase = sueldo / 30;
+    const alicuotaUtil = (diarioBase * dUtil) / 360;
+    const alicuotaVac = (diarioBase * dVac) / 360;
+    const salarioIntegral = diarioBase + alicuotaUtil + alicuotaVac;
 
     // 2. Tiempo exacto
-    let diffMs = fEgr - fIng;
-    let diasTotales = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    let anosCompletos = Math.floor(diasTotales / 365);
-    let mesesFraccion = Math.floor((diasTotales % 365) / 30);
+    let anos = fEgr.getFullYear() - fIng.getFullYear();
+    let meses = fEgr.getMonth() - fIng.getMonth();
+    if (meses < 0) { anos--; meses += 12; }
 
-    // 3. Lógica Progresiva y Fraccionaria
-    let diasTotalesDerecho = 0;
-    let detalleCalculo = "";
-
-    // Calculamos años cerrados primero
-    for (let i = 1; i <= anosCompletos; i++) {
-        let adicionales = (i > 1) ? Math.min((i - 1) * 2, 30) : 0;
-        diasTotalesDerecho += (60 + adicionales);
-        detalleCalculo += `Año ${i}: 60 + ${adicionales} días. `;
+    // 3. Cálculo de Días
+    // 60 por cada año + 5 por cada mes adicional
+    const diasBaseYMeses = (anos * 60) + (meses * 5);
+    
+    // 2 días adicionales por año a partir del 2do año
+    let diasAdic = 0;
+    if (anos >= 2) {
+        diasAdic = (anos - 1) * 2;
+        if (diasAdic > 30) diasAdic = 30;
     }
 
-    // 4. Lógica de la Fracción Final
-    if (mesesFraccion >= 6) {
-        // Barrera superada: Se suma el año siguiente COMPLETO con sus adicionales
-        let proxAno = anosCompletos + 1;
-        let adicionalesProx = Math.min((proxAno - 1) * 2, 30);
-        diasTotalesDerecho += (60 + adicionalesProx);
-        detalleCalculo += `Fracción > 6 meses: Año ${proxAno} completo (${60 + adicionalesProx} días).`;
-    } else {
-        // Barrera NO superada: Se suman solo 5 días por cada mes
-        let diasPorMeses = mesesFraccion * 5;
-        diasTotalesDerecho += diasPorMeses;
-        detalleCalculo += `Fracción < 6 meses: ${mesesFraccion} meses x 5 días = ${diasPorMeses} días.`;
-    }
+    // 4. Domingos y Feriados (Se pagan a salario diario normal o integral según criterio)
+    // Aquí usaremos salario diario normal con recargo de ley del 50% por ser días trabajados no pagados
+    const montoExtras = (domingos + feriados) * (diarioBase * 1.5);
 
     // 5. Totales
-    const montoPrestaciones = diasTotalesDerecho * salarioIntegralDiario;
+    const montoPrestaciones = (diasBaseYMeses + diasAdic) * salarioIntegral;
     let montoIndem = (motivo === 'despido') ? montoPrestaciones : 0;
-    const totalFinal = montoPrestaciones + montoIndem;
+    const totalFinal = montoPrestaciones + montoIndem + montoExtras;
 
-    // 6. Mostrar Resultados
+    // Mostrar
     document.getElementById('resultados').classList.remove('d-none');
-    document.getElementById('btnPDF').classList.remove('d-none');
+    document.getElementById('outIntegral').innerText = salarioIntegral.toFixed(2) + " $.";
+    document.getElementById('outTiempo').innerText = `${anos} años, ${meses} meses`;
+    document.getElementById('outDiasBase').innerText = diasBaseYMeses + " días";
+    document.getElementById('outDiasAdic').innerText = diasAdic + " días";
+    document.getElementById('outMontoExtras').innerText = montoExtras.toLocaleString('es-VE') + " $.";
+    document.getElementById('outSubtotal').innerText = montoPrestaciones.toLocaleString('es-VE') + " $.";
     
-    document.getElementById('outTiempo').innerText = `${anosCompletos} años y ${mesesFraccion} meses`;
-    document.getElementById('outDiasBase').innerText = `${diasTotalesDerecho} días`;
-    document.getElementById('notaSobreTiempo').innerText = detalleCalculo;
-    document.getElementById('outSubtotal').innerText = `$ ${montoPrestaciones.toFixed(2)}`;
-    document.getElementById('outTotal').innerText = `$ ${totalFinal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+    if (montoIndem > 0) {
+        document.getElementById('areaIndem').classList.remove('d-none');
+        document.getElementById('outIndem').innerText = montoIndem.toLocaleString('es-VE') + "$.";
+    } else {
+        document.getElementById('areaIndem').classList.add('d-none');
+    }
+
+    document.getElementById('outTotal').innerText = totalFinal.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " Bs.";
 }
 function generarPDF() {
     const elemento = document.getElementById('contenido-pdf');
