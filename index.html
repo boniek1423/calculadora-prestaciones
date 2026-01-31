@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calculadora Laboral Total - Venezuela</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Librería para generar PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- jsPDF para generación directa de PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- AutoTable plugin para tablas en jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
     <style>
         :root { --primary-blue: #00247d; --ven-yellow: #ffcc00; }
         body { background-color: #f4f7f6; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -15,13 +18,6 @@
         .res-box { background: #fff; border-radius: 15px; padding: 20px; border-left: 5px solid var(--primary-blue); }
         .total-highlight { font-size: 2rem; color: #198754; font-weight: bold; }
         .section-title { color: var(--primary-blue); font-weight: bold; border-bottom: 2px solid var(--ven-yellow); display: inline-block; margin-bottom: 15px; }
-        
-        /* Estilos específicos para impresión/PDF */
-        @media print {
-            body { background-color: white; }
-            .card { box-shadow: none; border: 1px solid #ddd; }
-            .no-print { display: none !important; }
-        }
         
         .pdf-btn {
             background: linear-gradient(45deg, #dc3545, #c82333);
@@ -52,7 +48,7 @@
                             <div class="col-md-4">
                                 <h6 class="section-title">1. Salario y Alícuotas</h6>
                                 <div class="mb-3">
-                                    <label class="form-label small fw-bold">Salario Mensual Base ($.)</label>
+                                    <label class="form-label small fw-bold">Salario Mensual Base ($)</label>
                                     <input type="number" id="sueldo" class="form-control" placeholder="0.00" required>
                                 </div>
                                 <div class="row">
@@ -91,7 +87,7 @@
                                 <div class="mb-3">
                                     <label class="form-label small fw-bold">Domingos No Pagados</label>
                                     <input type="number" id="domingos" class="form-control" value="0">
-                                    <small class="text-muted">Días de descanso trabajados y no cobrados.</small>
+                                    <small class="text-muted">Días de descanso trabajados</small>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label small fw-bold">Feriados No Pagados</label>
@@ -101,68 +97,43 @@
 
                             <div class="col-12 mt-4 text-center">
                                 <button type="button" onclick="calcularTotal()" class="btn btn-primary btn-lg px-5 rounded-pill shadow">
-                                    Calcular Liquidación Final
+                                    Calcular Liquidación
                                 </button>
                             </div>
                         </div>
                     </form>
 
                     <div id="resultados" class="mt-5 d-none">
-                        <div id="pdfContent" class="res-box shadow-sm">
-                            <!-- Encabezado para el PDF -->
-                            <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3">
-                                <div>
-                                    <h4 class="mb-0 text-primary">Recibo de Liquidación Laboral</h4>
-                                    <small class="text-muted">Fecha de cálculo: <span id="fechaPdf"></span></small>
-                                </div>
-                                <div class="text-end">
-                                    <span class="badge bg-primary">Venezuela</span>
-                                </div>
-                            </div>
-
+                        <div class="res-box shadow-sm">
+                            <h5 class="text-primary mb-3">Resultados del Cálculo</h5>
                             <div class="row">
-                                <div class="col-md-7">
-                                    <h5 class="text-primary mb-3">Detalle Técnico</h5>
+                                <div class="col-md-6">
                                     <table class="table table-sm">
                                         <tr><td>Salario Integral Diario:</td><td class="text-end fw-bold" id="outIntegral"></td></tr>
-                                        <tr><td>Tiempo Total:</td><td class="text-end fw-bold" id="outTiempo"></td></tr>
-                                        <tr><td>Días Acumulados (Base + Meses):</td><td class="text-end fw-bold" id="outDiasBase"></td></tr>
-                                        <tr><td>Días Adicionales (2 por año):</td><td class="text-end fw-bold text-success" id="outDiasAdic"></td></tr>
-                                        <tr><td>Monto por Descansos/Feriados:</td><td class="text-end fw-bold" id="outMontoExtras"></td></tr>
+                                        <tr><td>Tiempo de Servicio:</td><td class="text-end fw-bold" id="outTiempo"></td></tr>
+                                        <tr><td>Días Base (60/año + 5/mes):</td><td class="text-end fw-bold" id="outDiasBase"></td></tr>
+                                        <tr><td>Días Adicionales (2/año):</td><td class="text-end fw-bold text-success" id="outDiasAdic"></td></tr>
+                                        <tr><td>Domingos/Feriados:</td><td class="text-end fw-bold" id="outMontoExtras"></td></tr>
                                     </table>
                                 </div>
-                                <div class="col-md-5 text-center border-start d-flex flex-column justify-content-center">
-                                    <p class="mb-1 fw-bold text-muted">PRESTACIONES + EXTRAS</p>
+                                <div class="col-md-6 text-center border-start">
+                                    <p class="mb-1 fw-bold text-muted">PRESTACIONES</p>
                                     <h4 id="outSubtotal"></h4>
                                     
                                     <div id="areaIndem" class="d-none">
-                                        <p class="mb-1 fw-bold text-danger">INDEMNIZACIÓN (ART. 92)</p>
+                                        <p class="mb-1 fw-bold text-danger">INDEMNIZACIÓN</p>
                                         <h4 id="outIndem" class="text-danger"></h4>
                                     </div>
                                     <hr>
-                                    <p class="mb-0 fw-bold">NETO A RECIBIR:</p>
+                                    <p class="mb-0 fw-bold">TOTAL A RECIBIR:</p>
                                     <div class="total-highlight" id="outTotal"></div>
                                 </div>
                             </div>
-                            
-                            <!-- Pie de página para PDF -->
-                            <div class="mt-4 pt-3 border-top text-center text-muted small">
-                                <p class="mb-0">Este documento es una estimación calculada según la LOTTT vigente en Venezuela.</p>
-                                <p class="mb-0">Los valores pueden variar según interpretación legal específica o convenios colectivos.</p>
-                            </div>
                         </div>
 
-                        <!-- Botones de acción -->
-                        <div class="text-center mt-4 no-print">
-                            <button onclick="downloadPDF()" class="btn pdf-btn btn-lg px-5 rounded-pill shadow me-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-file-earmark-pdf-fill me-2" viewBox="0 0 16 16">
-                                    <path d="M5.523 12.468c-.172.53-.407 1.068-.692 1.588l-.432.824c-.163.312-.37.597-.618.858a1.88 1.88 0 0 1-.857.618c-.312.102-.667.153-1.067.153s-.755-.05-1.066-.153a1.88 1.88 0 0 1-.857-.618 2.83 2.83 0 0 1-.618-.858l-.432-.824c-.285-.52-.52-1.058-.692-1.588C.025 11.87 0 11.375 0 10.873c0-.502.025-.997.076-1.507.051-.53.186-1.068.407-1.588.221-.52.539-.982.949-1.386.41-.404.897-.736 1.458-.994.561-.258 1.2-.387 1.917-.387.717 0 1.356.129 1.917.387.561.258 1.048.59 1.458.994.41.404.728.866.949 1.386.22.52.356 1.058.407 1.588.05.51.076 1.005.076 1.507 0 .502-.025.997-.076 1.507-.05.53-.186 1.068-.407 1.588z"/>
-                                    <path d="M14 14V4.5L9.5 0H7v8.5a.5.5 0 0 1-.5.5H2v5.5a.5.5 0 0 0 .5.5H14z"/>
-                                </svg>
-                                Descargar PDF
-                            </button>
-                            <button onclick="window.print()" class="btn btn-outline-secondary btn-lg px-4 rounded-pill">
-                                Imprimir
+                        <div class="text-center mt-4">
+                            <button onclick="generarPDF()" class="btn pdf-btn btn-lg px-5 rounded-pill shadow">
+                                📄 Descargar PDF Profesional
                             </button>
                         </div>
                     </div>
@@ -173,8 +144,10 @@
 </div>
 
 <script>
+// Variables globales para guardar los datos calculados
+let datosCalculo = {};
+
 function calcularTotal() {
-    // Captura
     const sueldo = parseFloat(document.getElementById('sueldo').value);
     const dUtil = parseFloat(document.getElementById('diasUtil').value);
     const dVac = parseFloat(document.getElementById('diasVac').value);
@@ -184,95 +157,172 @@ function calcularTotal() {
     const domingos = parseInt(document.getElementById('domingos').value) || 0;
     const feriados = parseInt(document.getElementById('feriados').value) || 0;
 
-    if (isNaN(sueldo) || isNaN(fIng.getTime())) return alert("Complete los datos básicos.");
+    if (!sueldo || !fIng || !fEgr) {
+        alert("Complete todos los campos requeridos");
+        return;
+    }
 
-    // 1. Salario Integral (Base para Prestaciones)
+    // Cálculos
     const diarioBase = sueldo / 30;
     const alicuotaUtil = (diarioBase * dUtil) / 360;
     const alicuotaVac = (diarioBase * dVac) / 360;
     const salarioIntegral = diarioBase + alicuotaUtil + alicuotaVac;
 
-    // 2. Tiempo exacto
     let anos = fEgr.getFullYear() - fIng.getFullYear();
     let meses = fEgr.getMonth() - fIng.getMonth();
     if (meses < 0) { anos--; meses += 12; }
 
-    // 3. Cálculo de Días
     const diasBaseYMeses = (anos * 60) + (meses * 5);
-    
     let diasAdic = 0;
     if (anos >= 2) {
         diasAdic = (anos - 1) * 2;
         if (diasAdic > 30) diasAdic = 30;
     }
 
-    // 4. Domingos y Feriados
     const montoExtras = (domingos + feriados) * (diarioBase * 1.5);
-
-    // 5. Totales
     const montoPrestaciones = (diasBaseYMeses + diasAdic) * salarioIntegral;
-    let montoIndem = (motivo === 'despido') ? montoPrestaciones : 0;
+    const montoIndem = (motivo === 'despido') ? montoPrestaciones : 0;
     const totalFinal = montoPrestaciones + montoIndem + montoExtras;
 
-    // Mostrar
+    // Guardar datos para el PDF
+    datosCalculo = {
+        fecha: new Date().toLocaleDateString('es-VE'),
+        sueldo: sueldo,
+        salarioIntegral: salarioIntegral,
+        tiempo: `${anos} años, ${meses} meses`,
+        diasBase: diasBaseYMeses,
+        diasAdic: diasAdic,
+        extras: montoExtras,
+        prestaciones: montoPrestaciones,
+        indemnizacion: montoIndem,
+        total: totalFinal,
+        motivo: motivo === 'despido' ? 'Despido Injustificado' : 'Renuncia Voluntaria',
+        domingos: domingos,
+        feriados: feriados
+    };
+
+    // Mostrar en pantalla
     document.getElementById('resultados').classList.remove('d-none');
-    document.getElementById('fechaPdf').innerText = new Date().toLocaleDateString('es-VE');
-    document.getElementById('outIntegral').innerText = salarioIntegral.toFixed(2) + " $.";
-    document.getElementById('outTiempo').innerText = `${anos} años, ${meses} meses`;
+    document.getElementById('outIntegral').innerText = salarioIntegral.toFixed(2) + " $";
+    document.getElementById('outTiempo').innerText = datosCalculo.tiempo;
     document.getElementById('outDiasBase').innerText = diasBaseYMeses + " días";
     document.getElementById('outDiasAdic').innerText = diasAdic + " días";
-    document.getElementById('outMontoExtras').innerText = montoExtras.toLocaleString('es-VE') + " $.";
-    document.getElementById('outSubtotal').innerText = montoPrestaciones.toLocaleString('es-VE') + " $.";
+    document.getElementById('outMontoExtras').innerText = montoExtras.toLocaleString('es-VE') + " $";
+    document.getElementById('outSubtotal').innerText = montoPrestaciones.toLocaleString('es-VE') + " $";
     
+    const areaIndem = document.getElementById('areaIndem');
     if (montoIndem > 0) {
-        document.getElementById('areaIndem').classList.remove('d-none');
-        document.getElementById('outIndem').innerText = montoIndem.toLocaleString('es-VE') + "$.";
+        areaIndem.classList.remove('d-none');
+        document.getElementById('outIndem').innerText = montoIndem.toLocaleString('es-VE') + " $";
     } else {
-        document.getElementById('areaIndem').classList.add('d-none');
+        areaIndem.classList.add('d-none');
     }
 
-    document.getElementById('outTotal').innerText = totalFinal.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " Bs.";
+    document.getElementById('outTotal').innerText = totalFinal.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " $";
     
-    // Scroll suave a los resultados
     document.getElementById('resultados').scrollIntoView({ behavior: 'smooth' });
 }
 
-function downloadPDF() {
-    const element = document.getElementById('pdfContent');
-    const fecha = new Date().toISOString().split('T')[0];
-    const nombreArchivo = `Liquidacion_Laboral_${fecha}.pdf`;
+function generarPDF() {
+    if (!datosCalculo.total) {
+        alert("Primero debe calcular la liquidación");
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
     
-    const opt = {
-        margin: [10, 10],
-        filename: nombreArchivo,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-            scale: 2,
-            useCORS: true,
-            letterRendering: true
-        },
-        jsPDF: { 
-            unit: 'mm', 
-            format: 'a4', 
-            orientation: 'portrait'
-        }
-    };
+    // Configuración de colores y fuentes
+    const colorAzul = [0, 36, 125];
+    const colorAmarillo = [255, 204, 0];
+    const colorGris = [128, 128, 128];
+    
+    // Encabezado
+    doc.setFillColor(...colorAzul);
+    doc.rect(0, 0, 210, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.text("LIQUIDACIÓN LABORAL", 105, 25, { align: "center" });
+    
+    doc.setFontSize(10);
+    doc.text("Venezuela - LOTTT Vigente", 105, 32, { align: "center" });
+    
+    // Línea amarilla decorativa
+    doc.setFillColor(...colorAmarillo);
+    doc.rect(0, 40, 210, 3, 'F');
+    
+    // Fecha y motivo
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.text(`Fecha de cálculo: ${datosCalculo.fecha}`, 15, 55);
+    doc.text(`Motivo: ${datosCalculo.motivo}`, 15, 62);
+    
+    // Tabla de detalles
+    const filas = [
+        ["Salario Mensual Base", datosCalculo.sueldo.toLocaleString('es-VE') + " $"],
+        ["Salario Integral Diario", datosCalculo.salarioIntegral.toFixed(2) + " $"],
+        ["Tiempo de Servicio", datosCalculo.tiempo],
+        ["Días Base (60/año + 5/mes)", datosCalculo.diasBase + " días"],
+        ["Días Adicionales (+2/año)", datosCalculo.diasAdic + " días"],
+    ];
 
-    // Mostrar alerta de generación
-    const btn = document.querySelector('.pdf-btn');
-    const originalText = btn.innerHTML;
-    btn.innerHTML = 'Generando PDF...';
-    btn.disabled = true;
+    if (datosCalculo.domingos > 0 || datosCalculo.feriados > 0) {
+        filas.push(["Domingos/Feriados trabajados", `(${datosCalculo.domingos + datosCalculo.feriados} días) ${datosCalculo.extras.toLocaleString('es-VE')} $`]);
+    }
 
-    html2pdf().set(opt).from(element).save().then(() => {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
-    }).catch(err => {
-        console.error('Error al generar PDF:', err);
-        alert('Error al generar el PDF. Intente de nuevo.');
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+    doc.autoTable({
+        startY: 70,
+        head: [['Concepto', 'Valor']],
+        body: filas,
+        theme: 'striped',
+        headStyles: { fillColor: colorAzul, textColor: 255 },
+        styles: { fontSize: 11, cellPadding: 5 },
+        columnStyles: { 1: { halign: 'right', fontStyle: 'bold' } }
     });
+
+    let yPos = doc.lastAutoTable.finalY + 10;
+
+    // Subtotal
+    doc.setFontSize(12);
+    doc.setTextColor(...colorGris);
+    doc.text("PRESTACIONES SOCIALES:", 140, yPos, { align: "right" });
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "bold");
+    doc.text(datosCalculo.prestaciones.toLocaleString('es-VE') + " $", 195, yPos, { align: "right" });
+    
+    yPos += 10;
+
+    // Indemnización si aplica
+    if (datosCalculo.indemnizacion > 0) {
+        doc.setTextColor(220, 53, 69); // Rojo
+        doc.setFontSize(12);
+        doc.text("INDEMNIZACIÓN (Art. 92):", 140, yPos, { align: "right" });
+        doc.setFont("helvetica", "bold");
+        doc.text(datosCalculo.indemnizacion.toLocaleString('es-VE') + " $", 195, yPos, { align: "right" });
+        yPos += 10;
+    }
+
+    // Total
+    doc.setFillColor(240, 248, 255);
+    doc.rect(15, yPos - 5, 180, 15, 'F');
+    doc.setTextColor(...colorAzul);
+    doc.setFontSize(14);
+    doc.text("TOTAL A RECIBIR:", 140, yPos + 5, { align: "right" });
+    doc.setFontSize(16);
+    doc.text(datosCalculo.total.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " $", 195, yPos + 5, { align: "right" });
+
+    // Pie de página
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...colorGris);
+    doc.text("Este documento es una estimación calculada según la Ley Orgánica del Trabajo, los Trabajadores y Trabajadoras de Venezuela.", 105, 280, { align: "center" });
+    doc.text("Los valores pueden variar según interpretación legal específica o convenios colectivos.", 105, 285, { align: "center" });
+
+    // Descargar
+    const nombreArchivo = `Liquidacion_${datosCalculo.fecha.replace(/\//g, '-')}.pdf`;
+    doc.save(nombreArchivo);
 }
 </script>
 
