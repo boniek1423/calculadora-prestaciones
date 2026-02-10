@@ -25,7 +25,7 @@
     <div class="card">
         <div class="card-header text-center p-4">
             <h2 class="mb-0">Cálculo de Liquidación Integral (LOTTT)</h2>
-            <p class="mb-0 opacity-75">Fundamentados en los Art. 119,120, 121,131,141, 142 y 184</p>
+            <p class="mb-0 opacity-75">Fundamentados en los Art. 122, 142, 190, 192 y 131</p>
         </div>
         <div class="card-body p-4">
             <form id="liqForm">
@@ -82,14 +82,14 @@
                             <h5 class="text-primary mb-3">Detalle del Cálculo</h5>
                             <table class="table table-sm table-frac">
                                 <tr><td>Tiempo de Servicio:</td><td id="outTiempo" class="text-end fw-bold"></td></tr>
-                                <tr><td>Salario Integral Diario:</td><td id="outSDI" class="text-end fw-bold text-success"></td></tr>
-                                <tr class="table-light"><td>Prestaciones (Antigüedad):</td><td id="outAnt" class="text-end"></td></tr>
-                                <tr><td>Utilidades Fraccionadas:</td><td id="outUtilFrac" class="text-end"></td></tr>
-                                <tr><td>Vacaciones Fraccionadas:</td><td id="outVacFrac" class="text-end"></td></tr>
-                                <tr><td>Bono Vac. Fraccionado:</td><td id="outBonoFrac" class="text-end"></td></tr>
+                                <tr><td>Salario Integral Diario (Art. 122):</td><td id="outSDI" class="text-end fw-bold text-success"></td></tr>
+                                <tr class="table-light"><td>Garantía de Prestaciones (Art. 142):</td><td id="outAnt" class="text-end"></td></tr>
+                                <tr><td>Utilidades Fraccionadas (Art. 131):</td><td id="outUtilFrac" class="text-end"></td></tr>
+                                <tr><td>Vacaciones Fraccionadas (Art. 190):</td><td id="outVacFrac" class="text-end"></td></tr>
+                                <tr><td>Bono Vac. Fraccionado (Art. 192):</td><td id="outBonoFrac" class="text-end"></td></tr>
                                 <tr id="rowFeriados" class="d-none"><td>Feriados adeudados:</td><td id="outFeriados" class="text-end"></td></tr>
                                 <tr id="rowDomingos" class="d-none"><td>Domingos adeudados:</td><td id="outDomingos" class="text-end"></td></tr>
-                                <tr id="rowIndem" class="text-danger d-none"><td>Indemnización Art. 92:</td><td id="outIndem" class="text-end"></td></tr>
+                                <tr id="rowIndem" class="text-danger d-none"><td>Indemnización (Art. 92):</td><td id="outIndem" class="text-end"></td></tr>
                                 <tr class="text-secondary"><td>Deducciones Totales:</td><td id="outDed" class="text-end"></td></tr>
                             </table>
                         </div>
@@ -115,64 +115,64 @@ let res = {};
 function calcular() {
     const sBase = parseFloat(document.getElementById('sueldo').value);
     const tasa = parseFloat(document.getElementById('tasaBCV').value) || 1;
-    const fIng = new Date(document.getElementById('fIngreso').value);
-    const fEgr = new Date(document.getElementById('fEgreso').value);
+    const fIng = new Date(document.getElementById('fIngreso').value + 'T00:00:00');
+    const fEgr = new Date(document.getElementById('fEgreso').value + 'T00:00:00');
     const dUtil = parseFloat(document.getElementById('diasUtil').value);
-    const dVac = parseFloat(document.getElementById('diasVac').value);
+    const dVacBono = parseFloat(document.getElementById('diasVac').value);
     const motivo = document.getElementById('motivo').value;
     const deduc = parseFloat(document.getElementById('deducciones').value) || 0;
-    
-    // Nuevas variables
     const numFeriados = parseFloat(document.getElementById('feriados').value) || 0;
     const numDomingos = parseFloat(document.getElementById('domingos').value) || 0;
 
-    if (!sBase || isNaN(fIng) || isNaN(fEgr)) return alert("Datos incompletos");
+    if (!sBase || isNaN(fIng) || isNaN(fEgr)) return alert("Por favor complete los datos básicos.");
 
-    const dBase = sBase / 30;
-    const sIntegral = dBase + (dBase * dUtil / 360) + (dBase * dVac / 360);
+    // 1. Cálculo de Tiempo de Servicio Exacto
+    let años = fEgr.getFullYear() - fIng.getFullYear();
+    let meses = fEgr.getMonth() - fIng.getMonth();
+    let dias = fEgr.getDate() - fIng.getDate();
 
-    // Tiempo de servicio (Lógica de meses corregida)
-    let totalMeses = (fEgr.getFullYear() - fIng.getFullYear()) * 12 + (fEgr.getMonth() - fIng.getMonth());
-    if (fEgr.getDate() < fIng.getDate()) {
-        // Mantenemos el mes si es el mismo día o superior
+    if (dias < 0) {
+        meses--;
     }
-    let años = Math.floor(totalMeses / 12);
-    let meses = totalMeses % 12;
+    if (meses < 0) {
+        años--;
+        meses += 12;
+    }
+    const totalMesesServicio = (años * 12) + meses;
 
-    // 1. Prestaciones (Garantía Art. 142)
-    const mPrest = ((años * 60) + (meses * 5) + (años >= 1 ? Math.min(años * 2, 30) : 0)) * sIntegral;
+    // 2. Salario Integral Diario (Art. 122)
+    const dBase = sBase / 30;
+    const alicuotaUtil = (dBase * dUtil) / 360;
+    const alicuotaBonoVac = (dBase * dVacBono) / 360;
+    const sIntegral = dBase + alicuotaUtil + alicuotaBonoVac;
 
-    // 2. Utilidades Fraccionadas
+    // 3. Prestaciones Sociales (Garantía Art. 142 literal a y b)
+    // Se calculan 15 días por cada trimestre o fracción mayor a 2 meses
+    let diasGarantia = 0;
+    if (totalMesesServicio >= 3) {
+        diasGarantia = Math.floor(totalMesesServicio / 3) * 15;
+    }
+    // Art 142 literal c (30 días por año al terminar, si es más favorable, pero aquí usamos garantía base)
+    const mPrest = diasGarantia * sIntegral;
+
+    // 4. Utilidades Fraccionadas (Sobre el tiempo trabajado en el año civil actual)
     const inicioAño = new Date(fEgr.getFullYear(), 0, 1);
-    const fechaInicioUtil = fIng > inicioAño ? fIng : inicioAño;
-    const mesesUtilFrac = (fEgr.getMonth() - fechaInicioUtil.getMonth()) + (12 * (fEgr.getFullYear() - fechaInicioUtil.getFullYear())) + (fEgr.getDate() >= 15 ? 1 : 0);
-    const mUtilFrac = (mesesUtilFrac * (dUtil / 12)) * dBase;
+    const fechaInicioCalculoUtil = fIng > inicioAño ? fIng : inicioAño;
+    const mesesParaUtil = (fEgr.getMonth() - fechaInicioCalculoUtil.getMonth()) + (12 * (fEgr.getFullYear() - fechaInicioCalculoUtil.getFullYear()));
+    const mUtilFrac = (mesesParaUtil * (dUtil / 12)) * dBase;
 
-    // 3. Vacaciones y Bono
-    const mesesVacFrac = meses; 
-    const mVacFrac = (mesesVacFrac * ((15 + Math.min(años, 15)) / 12)) * dBase;
-    const mBonoFrac = (mesesVacFrac * (dVac / 12)) * dBase;
+    // 5. Vacaciones y Bono Fraccionado (Art. 190 y 192)
+    // Se calculan sobre los meses del año aniversario actual
+    const mesesAniversario = meses; 
+    const diasVacAnio = 15 + Math.min(años, 15); // 15 días + 1 por año (máx 15 adicionales)
+    const mVacFrac = (mesesAniversario * (diasVacAnio / 12)) * dBase;
+    const mBonoFrac = (mesesAniversario * (dVacBono / 12)) * dBase;
 
-    // 4. Feriados y Domingos (Calculados a salario base)
-  /*  const mFeriados = numFeriados * dBase;
-    const mDomingos = numDomingos * dBase;*/
-    // ... (dentro de la función calcular)
+    // 6. Feriados y Domingos
+    const mFeriados = numFeriados * dBase;
+    const mDomingos = numDomingos * dBase;
 
-// 4. Feriados y Domingos (Calculados a salario base según Art. 119 y 120)
-// Nota: Se usa dBase porque el recargo de ley es sobre el salario normal
-const mFeriados = numFeriados * dBase;
-const mDomingos = numDomingos * dBase;
-
-// 5. Indemnización (Si aplica)
-const mIndem = (motivo === 'despido') ? mPrest : 0;
-
-// SUMA TOTAL: Asegúrate de incluir mDomingos aquí
-const bruto = mPrest + mUtilFrac + mVacFrac + mBonoFrac + mIndem + mFeriados + mDomingos;
-const neto = bruto - deduc;
-
-// ... (el resto del objeto res se mantiene igual)
-
-    // 5. Indemnización
+    // 7. Indemnización por Despido (Art. 92 - Doblete)
     const mIndem = (motivo === 'despido') ? mPrest : 0;
 
     const bruto = mPrest + mUtilFrac + mVacFrac + mBonoFrac + mIndem + mFeriados + mDomingos;
@@ -180,7 +180,7 @@ const neto = bruto - deduc;
 
     res = {
         sIntegral, mPrest, mUtilFrac, mVacFrac, mBonoFrac, mIndem, mFeriados, mDomingos, neto, tasa, deduc,
-        tiempo: `${años} años, ${meses} meses`,
+        tiempo: `${años} años y ${meses} meses`,
         fReporte: new Date().toLocaleDateString('es-VE'),
         motivoTexto: motivo === 'despido' ? 'Despido Injustificado' : 'Renuncia Voluntaria'
     };
@@ -194,14 +194,17 @@ const neto = bruto - deduc;
     document.getElementById('outVacFrac').innerText = mVacFrac.toFixed(2) + " $";
     document.getElementById('outBonoFrac').innerText = mBonoFrac.toFixed(2) + " $";
     document.getElementById('outDed').innerText = "- " + deduc.toFixed(2) + " $";
-    document.getElementById('outTotalUSD').innerText = neto.toLocaleString('es-VE') + " $";
-    document.getElementById('outTotalBS').innerText = (neto * tasa).toLocaleString('es-VE') + " Bs.";
+    document.getElementById('outTotalUSD').innerText = neto.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " $";
+    document.getElementById('outTotalBS').innerText = (neto * tasa).toLocaleString('es-VE', {minimumFractionDigits: 2}) + " Bs.";
     
-    // Mostrar filas condicionales
     const toggleRow = (id, rowId, val) => {
         const row = document.getElementById(rowId);
-        if(val > 0) { row.classList.remove('d-none'); document.getElementById(id).innerText = val.toFixed(2) + " $"; }
-        else { row.classList.add('d-none'); }
+        if(val > 0) { 
+            row.classList.remove('d-none'); 
+            document.getElementById(id).innerText = val.toFixed(2) + " $"; 
+        } else { 
+            row.classList.add('d-none'); 
+        }
     };
 
     toggleRow('outFeriados', 'rowFeriados', mFeriados);
@@ -212,12 +215,15 @@ const neto = bruto - deduc;
 function generarPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
+    
+    // Header
     doc.setFillColor(0, 36, 125);
     doc.rect(0, 0, 210, 35, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.text("RECIBO DE LIQUIDACIÓN LABORAL", 105, 22, { align: "center" });
 
+    // Info General
     doc.setTextColor(40, 40, 40);
     doc.setFontSize(10);
     const info = [
@@ -226,10 +232,16 @@ function generarPDF() {
         ["Causa de Egreso:", res.motivoTexto],
         ["Tasa de Cambio:", res.tasa.toFixed(2) + " Bs/$"]
     ];
-    doc.autoTable({ startY: 45, body: info, theme: 'plain', columnStyles: {0: {cellWidth: 40, fontStyle: 'bold'}} });
+    doc.autoTable({ 
+        startY: 45, 
+        body: info, 
+        theme: 'plain', 
+        columnStyles: {0: {cellWidth: 45, fontStyle: 'bold'}} 
+    });
 
+    // Tabla de Conceptos
     const body = [
-        ["Prestaciones Sociales (Antigüedad)", res.mPrest.toFixed(2)],
+        ["Garantía de Prestaciones (Antigüedad)", res.mPrest.toFixed(2)],
         ["Utilidades Fraccionadas", res.mUtilFrac.toFixed(2)],
         ["Vacaciones Fraccionadas", res.mVacFrac.toFixed(2)],
         ["Bono Vacacional Fraccionado", res.mBonoFrac.toFixed(2)]
@@ -237,24 +249,27 @@ function generarPDF() {
     
     if(res.mFeriados > 0) body.push(["Feriados No Pagados", res.mFeriados.toFixed(2)]);
     if(res.mDomingos > 0) body.push(["Domingos No Pagados", res.mDomingos.toFixed(2)]);
-    if(res.mIndem > 0) body.push(["Indemnización Art. 92", res.mIndem.toFixed(2)]);
-    if(res.deduc > 0) body.push(["Deducciones", "-" + res.deduc.toFixed(2)]);
+    if(res.mIndem > 0) body.push(["Indemnización Art. 92 (Doble)", res.mIndem.toFixed(2)]);
+    if(res.deduc > 0) body.push(["Deducciones / Anticipos", "-" + res.deduc.toFixed(2)]);
 
     doc.autoTable({
         startY: doc.lastAutoTable.finalY + 10,
-        head: [['Concepto', 'Monto ($)']],
+        head: [['Concepto LOTTT', 'Monto en Divisas ($)']],
         body: body,
         headStyles: { fillColor: [0, 36, 125] },
         columnStyles: { 1: { halign: 'right' } }
     });
 
+    // Totales
     const finalY = doc.lastAutoTable.finalY + 15;
     doc.setFontSize(14);
-    doc.text(`TOTAL NETO A RECIBIR: ${res.neto.toLocaleString('es-VE')} $`, 200, finalY, { align: 'right' });
+    doc.setFont(undefined, 'bold');
+    doc.text(`TOTAL NETO A RECIBIR: ${res.neto.toLocaleString('es-VE', {minimumFractionDigits: 2})} $`, 200, finalY, { align: 'right' });
     doc.setFontSize(11);
-    doc.text(`Equivalente en Bolívares: ${(res.neto * res.tasa).toLocaleString('es-VE')} Bs.`, 200, finalY + 8, { align: 'right' });
+    doc.setFont(undefined, 'normal');
+    doc.text(`Equivalente en Bolívares (BCV): ${(res.neto * res.tasa).toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs.`, 200, finalY + 8, { align: 'right' });
 
-    doc.save(`Liquidacion_Venezuela.pdf`);
+    doc.save(`Liquidacion_${res.fReporte.replace(/\//g,'-')}.pdf`);
 }
 </script>
 </body>
