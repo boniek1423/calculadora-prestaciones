@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calculadora Laboral Pro - Venezuela</title>
+    <title>Calculadora Laboral Pro - Venezuela (Equidad)</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
@@ -25,7 +25,7 @@
     <div class="card">
         <div class="card-header text-center p-4">
             <h2 class="mb-0">Cálculo de Liquidación Integral (LOTTT)</h2>
-            <p class="mb-0 opacity-75">Cálculos basados en los Art. 122, 142, 190, 192 y 131</p>
+            <p class="mb-0 opacity-75">Con Regla de Equidad (Art. 18 LOTTT - In Dubio Pro Operario)</p>
         </div>
         <div class="card-body p-4">
             <form id="liqForm">
@@ -82,4 +82,191 @@
                             <h5 class="text-primary mb-3">Detalle del Cálculo</h5>
                             <table class="table table-sm table-frac">
                                 <tr><td>Tiempo de Servicio:</td><td id="outTiempo" class="text-end fw-bold"></td></tr>
-                                <tr class="table-info"><td>Días de Prestación (Acumulados):</td><td id
+                                <tr class="table-info"><td>Días de Prestación (Acumulados):</td><td id="outDiasAnt" class="text-end fw-bold text-primary"></td></tr>
+                                <tr><td>Salario Integral Diario:</td><td id="outSDI" class="text-end fw-bold text-success"></td></tr>
+                                <tr class="table-light"><td>Monto Prestaciones (Art. 142):</td><td id="outAnt" class="text-end"></td></tr>
+                                <tr><td>Utilidades Fraccionadas:</td><td id="outUtilFrac" class="text-end"></td></tr>
+                                <tr><td>Vacaciones Fraccionadas:</td><td id="outVacFrac" class="text-end"></td></tr>
+                                <tr><td>Bono Vac. Fraccionado:</td><td id="outBonoFrac" class="text-end"></td></tr>
+                                <tr id="rowFeriados" class="d-none"><td>Feriados adeudados:</td><td id="outFeriados" class="text-end"></td></tr>
+                                <tr id="rowDomingos" class="d-none"><td>Domingos adeudados:</td><td id="outDomingos" class="text-end"></td></tr>
+                                <tr id="rowIndem" class="text-danger d-none fw-bold"><td>Indemnización Art. 92:</td><td id="outIndem" class="text-end"></td></tr>
+                                <tr class="text-secondary"><td>Deducciones Totales:</td><td id="outDed" class="text-end"></td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-5 text-center border-start d-flex flex-column justify-content-center">
+                            <p class="mb-0 fw-bold text-muted">NETO A PAGAR ($)</p>
+                            <div id="outTotalUSD" class="total-highlight"></div>
+                            <p class="mb-0 mt-3 fw-bold text-muted">EQUIVALENTE EN BS.</p>
+                            <div id="outTotalBS" class="h4 text-primary fw-bold"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center mt-4">
+                    <button onclick="generarPDF()" class="btn pdf-btn btn-lg rounded-pill shadow">📄 Descargar Reporte PDF</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let res = {};
+
+function calcular() {
+    const sBase = parseFloat(document.getElementById('sueldo').value);
+    const tasa = parseFloat(document.getElementById('tasaBCV').value) || 1;
+    const fIng = new Date(document.getElementById('fIngreso').value + 'T00:00:00');
+    const fEgr = new Date(document.getElementById('fEgreso').value + 'T00:00:00');
+    const dUtil = parseFloat(document.getElementById('diasUtil').value);
+    const dVacBono = parseFloat(document.getElementById('diasVac').value);
+    const motivo = document.getElementById('motivo').value;
+    const deduc = parseFloat(document.getElementById('deducciones').value) || 0;
+    const numFeriados = parseFloat(document.getElementById('feriados').value) || 0;
+    const numDomingos = parseFloat(document.getElementById('domingos').value) || 0;
+
+    if (!sBase || isNaN(fIng.getTime()) || isNaN(fEgr.getTime())) return alert("Por favor complete los datos obligatorios.");
+
+    // --- LÓGICA DE TIEMPO CON REGLA DE EQUIDAD ---
+    let años = fEgr.getFullYear() - fIng.getFullYear();
+    let meses = fEgr.getMonth() - fIng.getMonth();
+    let diaIng = fIng.getDate();
+    let diaEgr = fEgr.getDate();
+
+    // Regla de Equidad Laboral:
+    // Si el día de egreso es menor al de ingreso, normalmente restaríamos un mes.
+    // Pero si el trabajador laboró al menos 15 días del mes actual, 
+    // lo redondeamos a su favor según el principio In Dubio Pro Operario.
+    if (diaEgr < diaIng) {
+        if (diaEgr < 15) {
+            meses--; // Solo restamos el mes si trabajó menos de 15 días en el último tramo
+        }
+    }
+
+    if (meses < 0) {
+        años--;
+        meses += 12;
+    }
+    const totalMesesServicio = (años * 12) + meses;
+
+    // 2. Salario Integral Diario (Art. 122)
+    const dBase = sBase / 30;
+    const alicuotaUtil = (dBase * dUtil) / 360;
+    const alicuotaBonoVac = (dBase * dVacBono) / 360;
+    const sIntegral = dBase + alicuotaUtil + alicuotaBonoVac;
+
+    // 3. Días de Antigüedad (Art. 142)
+    let diasGarantia = 0;
+    if (totalMesesServicio >= 3) {
+        diasGarantia = Math.floor(totalMesesServicio / 3) * 15;
+    }
+    let diasAdicionales = (años >= 1) ? Math.min(años * 2, 30) : 0;
+    
+    const totalDiasPrestacion = diasGarantia + diasAdicionales;
+    const mPrest = totalDiasPrestacion * sIntegral;
+
+    // 4. Fraccionados (Vacaciones y Utilidades)
+    // Se calculan sobre los meses del año aniversario/civil actual
+    const mUtilFrac = (meses * (dUtil / 12)) * dBase;
+    const diasVacAnio = 15 + Math.min(años, 15);
+    const mVacFrac = (meses * (diasVacAnio / 12)) * dBase;
+    const mBonoFrac = (meses * (dVacBono / 12)) * dBase;
+
+    // 5. Otros Conceptos
+    const mFeriados = numFeriados * dBase;
+    const mDomingos = numDomingos * dBase;
+    const mIndem = (motivo === 'despido') ? mPrest : 0;
+
+    const bruto = mPrest + mUtilFrac + mVacFrac + mBonoFrac + mIndem + mFeriados + mDomingos;
+    const neto = bruto - deduc;
+
+    res = {
+        sIntegral, mPrest, mUtilFrac, mVacFrac, mBonoFrac, mIndem, mFeriados, mDomingos, neto, tasa, deduc,
+        totalDiasPrestacion,
+        tiempo: `${años} años y ${meses} meses`,
+        fReporte: new Date().toLocaleDateString('es-VE'),
+        motivoTexto: motivo === 'despido' ? 'Despido Injustificado' : 'Renuncia Voluntaria'
+    };
+
+    // UI Updates
+    document.getElementById('resDiv').classList.remove('d-none');
+    document.getElementById('outTiempo').innerText = res.tiempo;
+    document.getElementById('outDiasAnt').innerText = res.totalDiasPrestacion + " días";
+    document.getElementById('outSDI').innerText = sIntegral.toFixed(2) + " $";
+    document.getElementById('outAnt').innerText = mPrest.toFixed(2) + " $";
+    document.getElementById('outUtilFrac').innerText = mUtilFrac.toFixed(2) + " $";
+    document.getElementById('outVacFrac').innerText = mVacFrac.toFixed(2) + " $";
+    document.getElementById('outBonoFrac').innerText = mBonoFrac.toFixed(2) + " $";
+    document.getElementById('outDed').innerText = "- " + deduc.toFixed(2) + " $";
+    document.getElementById('outTotalUSD').innerText = neto.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " $";
+    document.getElementById('outTotalBS').innerText = (neto * tasa).toLocaleString('es-VE', {minimumFractionDigits: 2}) + " Bs.";
+
+    // Manejo de filas condicionales
+    const toggleRow = (id, rowId, val) => {
+        const row = document.getElementById(rowId);
+        if(val > 0) { 
+            row.classList.remove('d-none'); 
+            document.getElementById(id).innerText = val.toFixed(2) + " $"; 
+        } else { 
+            row.classList.add('d-none'); 
+        }
+    };
+    toggleRow('outFeriados', 'rowFeriados', mFeriados);
+    toggleRow('outDomingos', 'rowDomingos', mDomingos);
+    toggleRow('outIndem', 'rowIndem', mIndem);
+}
+
+function generarPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    doc.setFillColor(0, 36, 125);
+    doc.rect(0, 0, 210, 35, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.text("RECIBO DE LIQUIDACIÓN LABORAL", 105, 22, { align: "center" });
+
+    doc.setTextColor(40, 40, 40);
+    doc.setFontSize(10);
+    const info = [
+        ["Fecha de Reporte:", res.fReporte],
+        ["Tiempo de Servicio:", res.tiempo],
+        ["Días de Antigüedad:", res.totalDiasPrestacion + " días"],
+        ["Causa de Egreso:", res.motivoTexto],
+        ["Tasa de Cambio:", res.tasa.toFixed(2) + " Bs/$"]
+    ];
+    doc.autoTable({ startY: 45, body: info, theme: 'plain', columnStyles: {0: {cellWidth: 45, fontStyle: 'bold'}} });
+
+    const body = [
+        ["Prestaciones Sociales (Antigüedad)", res.mPrest.toFixed(2)],
+        ["Utilidades Fraccionadas", res.mUtilFrac.toFixed(2)],
+        ["Vacaciones Fraccionadas", res.mVacFrac.toFixed(2)],
+        ["Bono Vacacional Fraccionado", res.mBonoFrac.toFixed(2)]
+    ];
+    
+    if(res.mFeriados > 0) body.push(["Feriados Adeudados", res.mFeriados.toFixed(2)]);
+    if(res.mDomingos > 0) body.push(["Domingos Adeudados", res.mDomingos.toFixed(2)]);
+    if(res.mIndem > 0) body.push(["Indemnización Art. 92", res.mIndem.toFixed(2)]);
+    if(res.deduc > 0) body.push(["Deducciones", "-" + res.deduc.toFixed(2)]);
+
+    doc.autoTable({
+        startY: doc.lastAutoTable.finalY + 10,
+        head: [['Concepto', 'Monto en $']],
+        body: body,
+        headStyles: { fillColor: [0, 36, 125] },
+        columnStyles: { 1: { halign: 'right' } }
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 15;
+    doc.setFontSize(14);
+    doc.setFont(undefined, 'bold');
+    doc.text(`TOTAL NETO A RECIBIR: ${res.neto.toLocaleString('es-VE', {minimumFractionDigits: 2})} $`, 200, finalY, { align: 'right' });
+    doc.setFontSize(11);
+    doc.setFont(undefined, 'normal');
+    doc.text(`Equivalente en Bolívares: ${(res.neto * res.tasa).toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs.`, 200, finalY + 8, { align: 'right' });
+
+    doc.save(`Liquidacion_Venezuela.pdf`);
+}
+</script>
+</body>
+</html>
