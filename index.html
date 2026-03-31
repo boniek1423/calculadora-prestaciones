@@ -104,6 +104,25 @@
                                 <tr id="rowIndem" class="text-danger d-none fw-bold"><td>Indemnización Art. 92:</td><td id="outIndem" class="text-end"></td></tr>
                                 <tr class="text-secondary"><td>Deducciones Totales:</td><td id="outDed" class="text-end"></td></tr>
                             </table>
+                            <h5 class="text-primary mt-4 mb-3">Intereses sobre Prestaciones (Estimado)</h5>
+                            <table class="table table-sm table-striped table-frac">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Año</th>
+                                        <th>Meses</th>
+                                        <th>Acumulado ($)</th>
+                                        <th>Interés Est. ($)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaIntereses">
+                                    </tbody>
+                                <tfoot>
+                                    <tr class="table-warning fw-bold">
+                                        <colspan="3">Total Intereses a Pagar:</td>
+                                        <td id="totalInt" class="text-end text-danger"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
                         </div>
                         <div class="col-md-5 text-center border-start d-flex flex-column justify-content-center">
                             <p class="mb-0 fw-bold text-muted">NETO A PAGAR ($)</p>
@@ -162,6 +181,62 @@ function calcular() {
     const dBase = sBase / 30;
     const sIntegral = dBase + (dBase * dUtil / 360) + (dBase * dVacBono / 360);
     const mPrest = totalDiasPrestacion * sIntegral;
+
+    // --- LÓGICA DE INTERESES (ART. 143 LOTTT) ---
+    let tablaHTML = "";
+    let acumuladoPrest = 0;
+    let totalIntereses = 0;
+    const tasaInteresAnual = 0.12; // 12% anual estimado
+    const sdiActual = sIntegral;
+
+    const tbody = document.getElementById('tablaIntereses');
+    tbody.innerHTML = ""; // Limpiar tabla anterior
+
+    for (let i = 1; i <= años; i++) {
+        // Cada año se acumulan 60 días de salario (5 por mes)
+        acumuladoPrest += (60 * sdiActual); 
+        
+        // El interés se calcula sobre lo que ya estaba acumulado
+        let interesAnual = acumuladoPrest * tasaInteresAnual;
+        totalIntereses += interesAnual;
+
+        tablaHTML += `
+            <tr>
+                <td>Año ${i}</td>
+                <td>12</td>
+                <td>${acumuladoPrest.toFixed(2)} $</td>
+                <td class="text-end">${interesAnual.toFixed(2)} $</td>
+            </tr>`;
+    }
+
+    // Si hay meses fraccionados en el último año
+    if (meses > 0) {
+        let acumFrac = (meses * 5 * sdiActual);
+        let interesFrac = (acumuladoPrest + acumFrac) * (tasaInteresAnual * (meses / 12));
+        totalIntereses += interesFrac;
+        
+        tablaHTML += `
+            <tr>
+                <td>Fracción</td>
+                <td>${meses}</td>
+                <td>${(acumuladoPrest + acumFrac).toFixed(2)} $</td>
+                <td class="text-end">${interesFrac.toFixed(2)} $</td>
+            </tr>`;
+    }
+
+    tbody.innerHTML = tablaHTML;
+    document.getElementById('totalInt').innerText = totalIntereses.toFixed(2) + " $";
+
+    // AJUSTAR EL NETO FINAL (Sumamos los intereses al neto)
+    const netoConIntereses = neto + totalIntereses;
+    
+    // Actualizamos el objeto 'res' para el PDF
+    res.totalIntereses = totalIntereses;
+    res.netoFinal = netoConIntereses;
+
+    // Actualizar los labels finales con el nuevo monto
+    document.getElementById('outTotalUSD').innerText = netoConIntereses.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " $";
+    document.getElementById('outTotalBS').innerText = (netoConIntereses * tasa).toLocaleString('es-VE', {minimumFractionDigits: 2}) + " Bs.";
 
     const mUtilFrac = (meses * (dUtil / 12)) * dBase;
     const diasVacAnio = 15 + Math.min(años, 15);
@@ -244,6 +319,7 @@ function generarPDF() {
         ["Utilidades Fraccionadas", res.mUtilFrac.toFixed(2)],
         ["Vacaciones Fraccionadas", res.mVacFrac.toFixed(2)],
         ["Bono Vacacional Fraccionado", res.mBonoFrac.toFixed(2)]
+        ["Intereses Acumulados (Art. 143)", res.totalIntereses.toFixed(2)]
     ];
     if(res.mFeriados > 0) body.push(["Días Feriados Adeudados", res.mFeriados.toFixed(2)]);
     if(res.mDomingos > 0) body.push(["Días Domingos Adeudados", res.mDomingos.toFixed(2)]);
