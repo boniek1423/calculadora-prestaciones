@@ -144,6 +144,7 @@
 let res = {};
 
 function calcular() {
+    // 1. CAPTURA DE DATOS
     const sBase = parseFloat(document.getElementById('sueldo').value);
     const tasa = parseFloat(document.getElementById('tasaBCV').value) || 1;
     const fIng = new Date(document.getElementById('fIngreso').value + 'T00:00:00');
@@ -157,7 +158,7 @@ function calcular() {
 
     if (!sBase || isNaN(fIng.getTime()) || isNaN(fEgr.getTime())) return alert("Complete los datos obligatorios.");
 
-    // 1. TIEMPO CON REGLA DE EQUIDAD (Para 06/09/23 a 04/02/26 -> 2 años y 5 meses)
+    // 2. CÁLCULO DE TIEMPO
     let años = fEgr.getFullYear() - fIng.getFullYear();
     let meses = fEgr.getMonth() - fIng.getMonth();
     let diaIng = fIng.getDate();
@@ -165,78 +166,20 @@ function calcular() {
 
     if (diaEgr < diaIng) {
         let diasUltimoTramo = 30 - (diaIng - diaEgr);
-        if (diasUltimoTramo >= 15) { /* No restamos el mes */ } 
-        else { meses--; }
+        if (diasUltimoTramo < 15) { meses--; }
     }
     if (meses < 0) { años--; meses += 12; }
 
     const mesesTotales = (años * 12) + meses;
 
-    // 2. DÍAS DE PRESTACIONES (5 DÍAS POR MES + ADICIONALES)
+    // 3. PRESTACIONES Y CONCEPTOS BÁSICOS
     const diasGarantia = mesesTotales * 5; 
     const diasAdicionales = (años >= 1) ? Math.min(años * 2, 30) : 0;
     const totalDiasPrestacion = diasGarantia + diasAdicionales;
 
-    // 3. CÁLCULOS MONETARIOS
     const dBase = sBase / 30;
     const sIntegral = dBase + (dBase * dUtil / 360) + (dBase * dVacBono / 360);
     const mPrest = totalDiasPrestacion * sIntegral;
-
-    // --- LÓGICA DE INTERESES (ART. 143 LOTTT) ---
-    let tablaHTML = "";
-    let acumuladoPrest = 0;
-    let totalIntereses = 0;
-    const tasaInteresAnual = 0.12; // 12% anual estimado
-    const sdiActual = sIntegral;
-
-    const tbody = document.getElementById('tablaIntereses');
-    tbody.innerHTML = ""; // Limpiar tabla anterior
-
-    for (let i = 1; i <= años; i++) {
-        // Cada año se acumulan 60 días de salario (5 por mes)
-        acumuladoPrest += (60 * sdiActual); 
-        
-        // El interés se calcula sobre lo que ya estaba acumulado
-        let interesAnual = acumuladoPrest * tasaInteresAnual;
-        totalIntereses += interesAnual;
-
-        tablaHTML += `
-            <tr>
-                <td>Año ${i}</td>
-                <td>12</td>
-                <td>${acumuladoPrest.toFixed(2)} $</td>
-                <td class="text-end">${interesAnual.toFixed(2)} $</td>
-            </tr>`;
-    }
-
-    // Si hay meses fraccionados en el último año
-    if (meses > 0) {
-        let acumFrac = (meses * 5 * sdiActual);
-        let interesFrac = (acumuladoPrest + acumFrac) * (tasaInteresAnual * (meses / 12));
-        totalIntereses += interesFrac;
-        
-        tablaHTML += `
-            <tr>
-                <td>Fracción</td>
-                <td>${meses}</td>
-                <td>${(acumuladoPrest + acumFrac).toFixed(2)} $</td>
-                <td class="text-end">${interesFrac.toFixed(2)} $</td>
-            </tr>`;
-    }
-
-    tbody.innerHTML = tablaHTML;
-    document.getElementById('totalInt').innerText = totalIntereses.toFixed(2) + " $";
-
-    // AJUSTAR EL NETO FINAL (Sumamos los intereses al neto)
-    const netoConIntereses = neto + totalIntereses;
-    
-    // Actualizamos el objeto 'res' para el PDF
-    res.totalIntereses = totalIntereses;
-    res.netoFinal = netoConIntereses;
-
-    // Actualizar los labels finales con el nuevo monto
-    document.getElementById('outTotalUSD').innerText = netoConIntereses.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " $";
-    document.getElementById('outTotalBS').innerText = (netoConIntereses * tasa).toLocaleString('es-VE', {minimumFractionDigits: 2}) + " Bs.";
 
     const mUtilFrac = (meses * (dUtil / 12)) * dBase;
     const diasVacAnio = 15 + Math.min(años, 15);
@@ -247,31 +190,63 @@ function calcular() {
     const mDomingos = numDomingos * dBase;
     const mIndem = (motivo === 'despido') ? mPrest : 0;
 
-    const bruto = mPrest + mUtilFrac + mVacFrac + mBonoFrac + mIndem + mFeriados + mDomingos;
-    const neto = bruto - deduc;
+    // 4. LÓGICA DE INTERESES (ART. 143 LOTTT)
+    let tablaHTML = "";
+    let acumuladoPrest = 0;
+    let totalIntereses = 0;
+    const tasaInteresAnual = 0.12; 
+    const sdiActual = sIntegral;
 
+    const tbody = document.getElementById('tablaIntereses');
+    tbody.innerHTML = ""; 
+
+    for (let i = 1; i <= años; i++) {
+        acumuladoPrest += (60 * sdiActual); 
+        let interesAnual = acumuladoPrest * tasaInteresAnual;
+        totalIntereses += interesAnual;
+
+        tablaHTML += `<tr><td>Año ${i}</td><td>12</td><td>${acumuladoPrest.toFixed(2)} $</td><td class="text-end">${interesAnual.toFixed(2)} $</td></tr>`;
+    }
+
+    if (meses > 0) {
+        let acumFrac = (meses * 5 * sdiActual);
+        let interesFrac = (acumuladoPrest + acumFrac) * (tasaInteresAnual * (meses / 12));
+        totalIntereses += interesFrac;
+        tablaHTML += `<tr><td>Fracción</td><td>${meses}</td><td>${(acumuladoPrest + acumFrac).toFixed(2)} $</td><td class="text-end">${interesFrac.toFixed(2)} $</td></tr>`;
+    }
+
+    tbody.innerHTML = tablaHTML;
+    document.getElementById('totalInt').innerText = totalIntereses.toFixed(2) + " $";
+
+    // 5. CÁLCULO NETO FINAL
+    const bruto = mPrest + mUtilFrac + mVacFrac + mBonoFrac + mIndem + mFeriados + mDomingos;
+    const netoSinIntereses = bruto - deduc;
+    const netoFinal = netoSinIntereses + totalIntereses;
+
+    // 6. GUARDAR EN OBJETO GLOBAL PARA PDF
     res = {
         nombre: document.getElementById('nombreTrabajador').value || 'TRABAJADOR NO IDENTIFICADO',
         empresa: document.getElementById('nombreEmpresa').value || 'EMPRESA NO IDENTIFICADA',
-        sIntegral, mPrest, mUtilFrac, mVacFrac, mBonoFrac, mIndem, mFeriados, mDomingos, neto, tasa, deduc,
+        sIntegral, mPrest, mUtilFrac, mVacFrac, mBonoFrac, mIndem, mFeriados, mDomingos, 
+        neto: netoFinal, tasa, deduc, totalIntereses,
         diasGarantia, diasAdicionales, totalDiasPrestacion,
         tiempo: `${años} años y ${meses} meses`,
         fReporte: new Date().toLocaleDateString('es-VE'),
         motivoTexto: motivo === 'despido' ? 'Despido Injustificado' : 'Renuncia Voluntaria'
     };
 
-    // ACTUALIZAR INTERFAZ
+    // 7. ACTUALIZAR INTERFAZ
     document.getElementById('resDiv').classList.remove('d-none');
     document.getElementById('outTiempo').innerText = res.tiempo;
-    document.getElementById('outDiasAnt').innerText = `${res.totalDiasPrestacion} (${res.diasGarantia} de meses + ${res.diasAdicionales} adicionales)`;
+    document.getElementById('outDiasAnt').innerText = `${res.totalDiasPrestacion} días`;
     document.getElementById('outSDI').innerText = sIntegral.toFixed(2) + " $";
     document.getElementById('outAnt').innerText = mPrest.toFixed(2) + " $";
     document.getElementById('outUtilFrac').innerText = mUtilFrac.toFixed(2) + " $";
     document.getElementById('outVacFrac').innerText = mVacFrac.toFixed(2) + " $";
     document.getElementById('outBonoFrac').innerText = mBonoFrac.toFixed(2) + " $";
     document.getElementById('outDed').innerText = "- " + deduc.toFixed(2) + " $";
-    document.getElementById('outTotalUSD').innerText = neto.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " $";
-    document.getElementById('outTotalBS').innerText = (neto * tasa).toLocaleString('es-VE', {minimumFractionDigits: 2}) + " Bs.";
+    document.getElementById('outTotalUSD').innerText = netoFinal.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " $";
+    document.getElementById('outTotalBS').innerText = (netoFinal * tasa).toLocaleString('es-VE', {minimumFractionDigits: 2}) + " Bs.";
 
     const toggleRow = (id, rowId, val) => {
         const row = document.getElementById(rowId);
@@ -287,69 +262,40 @@ function generarPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
-    // Encabezado
     doc.setFillColor(0, 36, 125);
     doc.rect(0, 0, 210, 40, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.text("RECIBO DE LIQUIDACIÓN DE PRESTACIONES", 105, 20, { align: "center" });
-    doc.setFontSize(12);
-    doc.text(res.empresa.toUpperCase(), 105, 30, { align: "center" });
-
-    // Datos del trabajador
-    doc.setTextColor(40, 40, 40);
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'bold');
-    doc.text("DATOS GENERALES:", 14, 50);
-    doc.setFont(undefined, 'normal');
     
+    doc.setTextColor(40, 40, 40);
     const info = [
         ["Trabajador:", res.nombre.toUpperCase()],
-        ["Fecha Reporte:", res.fReporte],
+        ["Empresa:", res.empresa.toUpperCase()],
         ["Tiempo Servicio:", res.tiempo],
-        ["Días Acumulados:", res.totalDiasPrestacion + " días"],
-        ["Causa de Egreso:", res.motivoTexto],
-        ["Tasa BCV:", res.tasa.toFixed(2) + " Bs/$"]
+        ["Causa de Egreso:", res.motivoTexto]
     ];
-    doc.autoTable({ startY: 53, body: info, theme: 'plain', styles: { fontSize: 10 }, columnStyles: {0: {cellWidth: 40, fontStyle: 'bold'}} });
+    doc.autoTable({ startY: 45, body: info, theme: 'plain' });
 
-    // Tabla de Conceptos
     const body = [
-        ["Prestaciones Sociales (5 días por mes)", res.mPrest.toFixed(2)],
+        ["Prestaciones Sociales", res.mPrest.toFixed(2)],
+        ["Intereses Acumulados (Art. 143)", res.totalIntereses.toFixed(2)],
         ["Utilidades Fraccionadas", res.mUtilFrac.toFixed(2)],
         ["Vacaciones Fraccionadas", res.mVacFrac.toFixed(2)],
         ["Bono Vacacional Fraccionado", res.mBonoFrac.toFixed(2)]
-        ["Intereses Acumulados (Art. 143)", res.totalIntereses.toFixed(2)]
     ];
-    if(res.mFeriados > 0) body.push(["Días Feriados Adeudados", res.mFeriados.toFixed(2)]);
-    if(res.mDomingos > 0) body.push(["Días Domingos Adeudados", res.mDomingos.toFixed(2)]);
-    if(res.mIndem > 0) body.push(["Indemnización por Despido", res.mIndem.toFixed(2)]);
-    if(res.deduc > 0) body.push(["Deducciones (Préstamos/Anticipos)", "-" + res.deduc.toFixed(2)]);
+    if(res.mIndem > 0) body.push(["Indemnización Art. 92", res.mIndem.toFixed(2)]);
+    if(res.deduc > 0) body.push(["Deducciones", "-" + res.deduc.toFixed(2)]);
 
     doc.autoTable({
-        startY: doc.lastAutoTable.finalY + 8,
-        head: [['Concepto de Pago', 'Monto en Dólares ($)']],
+        startY: doc.lastAutoTable.finalY + 5,
+        head: [['Concepto', 'Monto ($)']],
         body: body,
-        headStyles: { fillColor: [0, 36, 125], halign: 'center' },
-        columnStyles: { 1: { halign: 'right' } }
+        headStyles: { fillColor: [0, 36, 125] }
     });
 
-    // Totales Finales
-    const finalY = doc.lastAutoTable.finalY + 15;
     doc.setFontSize(14);
-    doc.setFont(undefined, 'bold');
-    doc.text(`TOTAL NETO A PAGAR: ${res.neto.toLocaleString('es-VE', {minimumFractionDigits: 2})} $`, 200, finalY, { align: 'right' });
-    doc.setFontSize(11);
-    doc.setFont(undefined, 'normal');
-    doc.text(`Monto en Bolívares: ${(res.neto * res.tasa).toLocaleString('es-VE', {minimumFractionDigits: 2})} Bs.`, 200, finalY + 8, { align: 'right' });
-
-    // Firmas
-    const firmaY = finalY + 40;
-    doc.line(30, firmaY, 90, firmaY);
-    doc.text("Firma del Patrono", 60, firmaY + 5, { align: 'center' });
-    doc.line(120, firmaY, 180, firmaY);
-    doc.text("Firma del Trabajador", 150, firmaY + 5, { align: 'center' });
-
+    doc.text(`TOTAL NETO: ${res.neto.toFixed(2)} $`, 190, doc.lastAutoTable.finalY + 15, { align: 'right' });
     doc.save(`Liquidacion_${res.nombre}.pdf`);
 }
 </script>
