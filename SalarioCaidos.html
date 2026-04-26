@@ -2,134 +2,152 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Calculadora de Salarios Caídos - Reclamo Laboral</title>
+    <title>Liquidación Bimonetaria - Caso Forum</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f2f5; padding: 20px; }
-        .container { max-width: 650px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin: auto; }
-        h2 { color: #1a3a5a; text-align: center; margin-bottom: 10px; }
-        .legal-note { color: #d9534f; font-size: 0.85em; text-align: center; font-weight: bold; margin-bottom: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f8f9fa; padding: 20px; }
+        .container { max-width: 900px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin: auto; }
+        .header-print { text-align: center; border-bottom: 3px solid #2c3e50; margin-bottom: 20px; padding-bottom: 10px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        label { display: block; font-weight: bold; font-size: 0.85em; color: #555; }
+        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; background: #fff; }
+        .bcv-box { background: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #bbdefb; margin-bottom: 20px; }
+        button { width: 100%; padding: 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
+        .btn-calc { background: #27ae60; color: white; font-size: 1.1em; }
+        .btn-print { background: #34495e; color: white; }
         
-        .row { display: flex; gap: 15px; margin-bottom: 15px; }
-        .field { flex: 1; }
+        .result-table { width: 100%; border-collapse: collapse; margin-top: 20px; display: none; }
+        .result-table th, .result-table td { border: 1px solid #eee; padding: 12px; text-align: left; }
+        .result-table th { background: #f4f7f6; color: #2c3e50; }
+        .total-row { background: #2c3e50 !important; color: white; font-weight: bold; font-size: 1.2em; }
         
-        label { display: block; margin-top: 10px; font-weight: 600; color: #444; font-size: 0.9em; }
-        input { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccd0d5; border-radius: 6px; box-sizing: border-box; font-size: 1em; }
-        input:focus { border-color: #27ae60; outline: none; box-shadow: 0 0 5px rgba(39, 174, 96, 0.2); }
-        
-        button { width: 100%; padding: 15px; background: #27ae60; color: white; border: none; border-radius: 6px; margin-top: 25px; cursor: pointer; font-size: 17px; font-weight: bold; transition: background 0.3s; }
-        button:hover { background: #1e8449; }
-        
-        .result { margin-top: 30px; padding: 20px; background: #f8fff9; border: 1px solid #c3e6cb; border-radius: 8px; display: none; }
-        .result h3 { margin-top: 0; color: #2d572c; border-bottom: 2px solid #c3e6cb; padding-bottom: 10px; }
-        .item-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 1.05em; }
-        .grand-total { font-size: 1.4em; color: #1e8449; font-weight: 800; border-top: 2px solid #c3e6cb; padding-top: 10px; margin-top: 10px; }
-        .info-tag { font-size: 0.85em; color: #666; font-style: italic; margin-top: 15px; }
+        @media print {
+            .no-print { display: none; }
+            .container { box-shadow: none; border: none; width: 100%; max-width: 100%; }
+            .result-table { display: table !important; }
+        }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>Cálculo de Salarios Caídos</h2>
-    <div class="legal-note">* Basado en LOTTT Art. 92 y Art. 142</div>
+    <div class="header-print">
+        <h2 style="margin:0;">RELACIÓN DE SALARIOS CAÍDOS E INTERESES DE MORA</h2>
+        <p style="margin:5px 0;">Referencia: Desacato Reenganche - Exp. Inspectoría del Trabajo</p>
+    </div>
+
+    <div class="no-print">
+        <div class="bcv-box">
+            <label>Tasa Oficial BCV (Bs./USD):</label>
+            <input type="number" id="tasaBcv" value="36.50" step="0.01">
+        </div>
+
+        <div class="grid">
+            <div>
+                <label>Fecha de Inicio del Impago:</label>
+                <input type="date" id="fechaInicio">
+            </div>
+            <div>
+                <label>Fecha de Reenganche (Referencia):</label>
+                <input type="date" id="fechaReenganche" value="2026-02-25">
+            </div>
+            <div>
+                <label>Tasa Mora Anual (%):</label>
+                <input type="number" id="tasaMora" value="12">
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <label>Salario Diario ($):</label>
+                <input type="number" id="salario" value="11">
+            </div>
+            <div>
+                <label>Cesta Ticket Mensual ($):</label>
+                <input type="number" id="ct" value="50">
+            </div>
+            <div>
+                <label>Bono Guerra Mensual ($):</label>
+                <input type="number" id="bono" value="90">
+            </div>
+        </div>
+
+        <button class="btn-calc" onclick="calcularBimonetario()">CALCULAR DEUDA TOTAL</button>
+    </div>
+
+    <table id="tablaResultados" class="result-table">
+        <thead>
+            <tr>
+                <th>Concepto Laboral</th>
+                <th>Monto (USD)</th>
+                <th>Monto (VES)</th>
+            </tr>
+        </thead>
+        <tbody id="cuerpoTabla">
+            </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td>GRAN TOTAL A PAGAR</td>
+                <td id="totalUSD"></td>
+                <td id="totalVES"></td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div id="footerLegal" style="margin-top:20px; font-size:0.8em; color:#666; display:none;">
+        <p>Nota: Los montos en Bolívares están sujetos a ajuste según la tasa oficial del BCV a la fecha del pago efectivo (Art. 128 Ley BCV). Los intereses de mora se calculan según Art. 92 LOTTT.</p>
+        <br><br>
+        <div style="display:flex; justify-content: space-between; text-align:center;">
+            <div style="border-top:1px solid #000; width:200px;">Firma del Trabajador</div>
+            <div style="border-top:1px solid #000; width:200px;">Recibido por Inspectoría</div>
+        </div>
+    </div>
     
-    <div class="row">
-        <div class="field">
-            <label>Fecha de inicio del impago:</label>
-            <input type="date" id="fechaInicio">
-        </div>
-        <div class="field">
-            <label>Fecha de corte (hoy):</label>
-            <input type="date" id="fechaFin">
-        </div>
-    </div>
-
-    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
-
-    <div class="row">
-        <div class="field">
-            <label>Salario Diario Base ($):</label>
-            <input type="number" id="salario" value="11" step="0.01">
-        </div>
-        <div class="field">
-            <label>Cesta Ticket Mensual ($):</label>
-            <input type="number" id="cestaticket" value="50">
-        </div>
-    </div>
-
-    <label>Bono de Guerra Económica Mensual ($):</label>
-    <input type="number" id="bonoguerra" value="90">
-
-    <button onclick="calcularConFechas()">Generar Resumen de Deuda</button>
-
-    <div id="resultado" class="result">
-        <h3>Resumen Detallado</h3>
-        <div class="item-row">
-            <span>Días transcurridos:</span>
-            <span id="resDias" style="font-weight: bold;"></span>
-        </div>
-        <div class="item-row">
-            <span>Salarios Caídos:</span>
-            <span id="resSalarios"></span>
-        </div>
-        <div class="item-row">
-            <span>Cesta Ticket acumulado:</span>
-            <span id="resCT"></span>
-        </div>
-        <div class="item-row">
-            <span>Bonificación acumulada:</span>
-            <span id="resBonos"></span>
-        </div>
-        <div class="grand-total">
-            <span>TOTAL ADEUDADO:</span>
-            <span id="granTotal"></span>
-        </div>
-        <div class="info-tag" id="infoFechas"></div>
-    </div>
+    <button class="btn-print no-print" style="margin-top:20px; display:none;" id="btnPrint" onclick="window.print()">IMPRIMIR PARA EXPEDIENTE</button>
 </div>
 
 <script>
-    // Establecer la fecha de hoy por defecto en el segundo campo
-    document.getElementById('fechaFin').valueAsDate = new Date();
-
-    function calcularConFechas() {
-        const f1 = new Date(document.getElementById('fechaInicio').value);
-        const f2 = new Date(document.getElementById('fechaFin').value);
+    function calcularBimonetario() {
+        const tasa = parseFloat(document.getElementById('tasaBcv').value);
+        const fInicio = new Date(document.getElementById('fechaInicio').value);
+        const fHoy = new Date();
+        const fReenganche = new Date(document.getElementById('fechaReenganche').value);
         
-        if (isNaN(f1.getTime()) || isNaN(f2.getTime())) {
-            alert("Por favor, selecciona ambas fechas.");
-            return;
-        }
+        if(isNaN(fInicio)) return alert("Seleccione la fecha de inicio.");
 
-        if (f1 > f2) {
-            alert("La fecha de inicio no puede ser mayor a la fecha de corte.");
-            return;
-        }
-
-        // Diferencia en milisegundos y conversión a días
-        const diffTime = Math.abs(f2 - f1);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 para incluir el día inicial
+        const diffDays = Math.ceil(Math.abs(fHoy - fInicio) / (1000*60*60*24)) + 1;
         const meses = diffDays / 30;
+        const diasMora = Math.ceil(Math.abs(fHoy - fReenganche) / (1000*60*60*24));
+        const tasaMora = parseFloat(document.getElementById('tasaMora').value) / 100;
 
-        const salarioDiario = parseFloat(document.getElementById('salario').value);
-        const ctMensual = parseFloat(document.getElementById('cestaticket').value);
-        const bonoMensual = parseFloat(document.getElementById('bonoguerra').value);
+        const data = [
+            { c: `Salarios Caídos (${diffDays} días)`, v: diffDays * parseFloat(document.getElementById('salario').value) },
+            { c: "Cesta Ticket Acumulado", v: meses * parseFloat(document.getElementById('ct').value) },
+            { c: "Bono de Guerra Económica", v: meses * parseFloat(document.getElementById('bono').value) }
+        ];
 
-        // Cálculos Finales
-        const totalSalarios = diffDays * salarioDiario;
-        const totalCT = meses * ctMensual;
-        const totalBonos = meses * bonoMensual;
-        const granTotal = totalSalarios + totalCT + totalBonos;
+        let subtotalUSD = data.reduce((acc, item) => acc + item.v, 0);
+        let interesUSD = subtotalUSD * tasaMora * (diasMora / 365);
+        data.push({ c: `Intereses Moratorios (${diasMora} días)`, v: interesUSD });
 
-        // Mostrar en el DOM
-        document.getElementById('resDias').innerText = `${diffDays} días`;
-        document.getElementById('resSalarios').innerText = `$${totalSalarios.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-        document.getElementById('resCT').innerText = `$${totalCT.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-        document.getElementById('resBonos').innerText = `$${totalBonos.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-        document.getElementById('granTotal').innerText = `$${granTotal.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+        let finalUSD = subtotalUSD + interesUSD;
+
+        // Renderizar Tabla
+        const cuerpo = document.getElementById('cuerpoTabla');
+        cuerpo.innerHTML = "";
+        data.forEach(item => {
+            cuerpo.innerHTML += `<tr>
+                <td>${item.c}</td>
+                <td>$ ${item.v.toLocaleString('en-US',{minimumFractionDigits:2})}</td>
+                <td>Bs. ${(item.v * tasa).toLocaleString('es-VE',{minimumFractionDigits:2})}</td>
+            </tr>`;
+        });
+
+        document.getElementById('totalUSD').innerText = `$ ${finalUSD.toLocaleString('en-US',{minimumFractionDigits:2})}`;
+        document.getElementById('totalVES').innerText = `Bs. ${(finalUSD * tasa).toLocaleString('es-VE',{minimumFractionDigits:2})}`;
         
-        document.getElementById('infoFechas').innerText = `* Cálculo basado en el periodo del ${f1.toLocaleDateString()} al ${f2.toLocaleDateString()}.`;
-        
-        document.getElementById('resultado').style.display = 'block';
+        document.getElementById('tablaResultados').style.display = 'table';
+        document.getElementById('footerLegal').style.display = 'block';
+        document.getElementById('btnPrint').style.display = 'block';
     }
 </script>
 
