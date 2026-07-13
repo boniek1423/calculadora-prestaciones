@@ -245,8 +245,9 @@ function calcular() {
     document.getElementById('outVacFrac').innerText = mVacFrac.toFixed(2) + " $";
     document.getElementById('outBonoFrac').innerText = mBonoFrac.toFixed(2) + " $";
     document.getElementById('outDed').innerText = "- " + deduc.toFixed(2) + " $";
-    document.getElementById('outTotalUSD').innerText = netoFinal.toLocaleString('es-VE', {minimumFractionDigits: 2}) + " $";
-    document.getElementById('outTotalBS').innerText = (netoFinal * tasa).toLocaleString('es-VE', {minimumFractionDigits: 2}) + " Bs.";
+     // Reemplaza las líneas originales de outTotalUSD y outTotalBS por estas:
+document.getElementById('outTotalUSD').innerText = netoFinal.toFixed(2) + " $";
+document.getElementById('outTotalBS').innerText = (netoFinal * tasa).toFixed(2) + " Bs.";
 
     const toggleRow = (id, rowId, val) => {
         const row = document.getElementById(rowId);
