@@ -2,27 +2,33 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Liquidación Bimonetaria - Caso Forum</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cálculo de Salarios Caídos e Intereses - Caso Forum</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #f8f9fa; padding: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; padding: 20px; color: #333; }
         .container { max-width: 900px; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin: auto; }
         .header-print { text-align: center; border-bottom: 3px solid #2c3e50; margin-bottom: 20px; padding-bottom: 10px; }
         .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
-        label { display: block; font-weight: bold; font-size: 0.85em; color: #555; }
-        input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; background: #fff; }
+        label { display: block; font-weight: bold; font-size: 0.85em; color: #555; margin-bottom: 5px; }
+        input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; background: #fff; font-size: 0.95em; }
         .bcv-box { background: #e3f2fd; padding: 15px; border-radius: 8px; border: 1px solid #bbdefb; margin-bottom: 20px; }
+        
         button { width: 100%; padding: 15px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
         .btn-calc { background: #27ae60; color: white; font-size: 1.1em; }
+        .btn-calc:hover { background: #219150; }
         .btn-print { background: #34495e; color: white; }
+        .btn-print:hover { background: #2c3e50; }
         
         .result-table { width: 100%; border-collapse: collapse; margin-top: 20px; display: none; }
-        .result-table th, .result-table td { border: 1px solid #eee; padding: 12px; text-align: left; }
-        .result-table th { background: #f4f7f6; color: #2c3e50; }
-        .total-row { background: #2c3e50 !important; color: white; font-weight: bold; font-size: 1.2em; }
-        
+        .result-table th, .result-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .result-table th { background: #2c3e50; color: white; }
+        .total-row { background: #1a252f !important; color: white; font-weight: bold; font-size: 1.1em; }
+        .subtotal-row { background: #eef2f5; font-weight: bold; }
+
         @media print {
-            .no-print { display: none; }
-            .container { box-shadow: none; border: none; width: 100%; max-width: 100%; }
+            .no-print { display: none !important; }
+            body { background: white; padding: 0; }
+            .container { box-shadow: none; border: none; width: 100%; max-width: 100%; padding: 0; }
             .result-table { display: table !important; }
         }
     </style>
@@ -31,24 +37,28 @@
 
 <div class="container">
     <div class="header-print">
-        <h2 style="margin:0;">RELACIÓN DE SALARIOS CAÍDOS E INTERESES DE MORA</h2>
-        <p style="margin:5px 0;">Referencia: Desacato Reenganche - Exp. Inspectoría del Trabajo</p>
+        <h2 style="margin:0; color:#2c3e50;">RELACIÓN DE SALARIOS CAÍDOS E INTERESES DE MORA</h2>
+        <p style="margin:5px 0; font-weight: 500;">Procedimiento de Desacato de Reenganche — LOTTT</p>
     </div>
 
     <div class="no-print">
         <div class="bcv-box">
-            <label>Tasa Oficial BCV (Bs./USD):</label>
-            <input type="number" id="tasaBcv" value="36.50" step="0.01">
+            <label>Tasa Oficial BCV (Bs. / USD):</label>
+            <input type="number" id="tasaBcv" value="775.34" step="0.01">
         </div>
 
         <div class="grid">
             <div>
-                <label>Fecha de Inicio del Impago:</label>
+                <label>Fecha Inicio Impago / Despido:</label>
                 <input type="date" id="fechaInicio">
             </div>
             <div>
-                <label>Fecha de Reenganche (Referencia):</label>
-                <input type="date" id="fechaReenganche" value="2026-02-25">
+                <label>Fecha de Orden / Corte:</label>
+                <input type="date" id="fechaReenganche" value="2026-08-19">
+            </div>
+            <div>
+                <label>Días en Mora (Impago):</label>
+                <input type="number" id="diasMoraInput" value="90">
             </div>
             <div>
                 <label>Tasa Mora Anual (%):</label>
@@ -58,20 +68,20 @@
 
         <div class="grid">
             <div>
-                <label>Salario Diario ($):</label>
-                <input type="number" id="salario" value="11">
+                <label>Salario Diario Normal ($):</label>
+                <input type="number" id="salario" value="6.34" step="0.01">
             </div>
             <div>
                 <label>Cesta Ticket Mensual ($):</label>
-                <input type="number" id="ct" value="50">
+                <input type="number" id="ct" value="50" step="0.01">
             </div>
             <div>
-                <label>Bono Guerra Mensual ($):</label>
-                <input type="number" id="bono" value="90">
+                <label>Bono Wallet / Tienda Mensual ($):</label>
+                <input type="number" id="bono" value="40" step="0.01">
             </div>
         </div>
 
-        <button class="btn-calc" onclick="calcularBimonetario()">CALCULAR DEUDA TOTAL</button>
+        <button class="btn-calc" onclick="calcularBimonetario()">CALCULAR LIQUIDACIÓN Y DEUDA</button>
     </div>
 
     <table id="tablaResultados" class="result-table">
@@ -83,7 +93,7 @@
             </tr>
         </thead>
         <tbody id="cuerpoTabla">
-            </tbody>
+        </tbody>
         <tfoot>
             <tr class="total-row">
                 <td>GRAN TOTAL A PAGAR</td>
@@ -93,12 +103,12 @@
         </tfoot>
     </table>
 
-    <div id="footerLegal" style="margin-top:20px; font-size:0.8em; color:#666; display:none;">
-        <p>Nota: Los montos en Bolívares están sujetos a ajuste según la tasa oficial del BCV a la fecha del pago efectivo (Art. 128 Ley BCV). Los intereses de mora se calculan según Art. 92 LOTTT.</p>
-        <br><br>
+    <div id="footerLegal" style="margin-top:30px; font-size:0.82em; color:#555; display:none;">
+        <p><strong>Fundamento Legal:</strong> Los montos expresados en Bolívares se calculan a la tasa oficial del Banco Central de Venezuela conforme al Art. 128 de la Ley del BCV. La integración del bono de wallet/tienda como parte del salario normal se sustenta en el principio de primacía de la realidad y la jurisprudencia vinculante de la <strong>Sentencia Nº 341 del 06/08/2026</strong> de la Sala de Casación Social del TSJ. Los intereses moratorios se liquidan según lo estipulado en el Art. 92 de la LOTTT.</p>
+        <br><br><br>
         <div style="display:flex; justify-content: space-between; text-align:center;">
-            <div style="border-top:1px solid #000; width:200px;">Firma del Trabajador</div>
-            <div style="border-top:1px solid #000; width:200px;">Recibido por Inspectoría</div>
+            <div style="border-top:1px solid #000; width:220px; padding-top:5px;">Firma del Trabajador</div>
+            <div style="border-top:1px solid #000; width:220px; padding-top:5px;">Recibido / Inspectoría del Trabajo</div>
         </div>
     </div>
     
@@ -108,42 +118,63 @@
 <script>
     function calcularBimonetario() {
         const tasa = parseFloat(document.getElementById('tasaBcv').value);
-        const fInicio = new Date(document.getElementById('fechaInicio').value);
-        const fHoy = new Date();
-        const fReenganche = new Date(document.getElementById('fechaReenganche').value);
-        
-        if(isNaN(fInicio)) return alert("Seleccione la fecha de inicio.");
+        const fInicioVal = document.getElementById('fechaInicio').value;
+        const fReengancheVal = document.getElementById('fechaReenganche').value;
 
-        const diffDays = Math.ceil(Math.abs(fHoy - fInicio) / (1000*60*60*24)) + 1;
-        const meses = diffDays / 30;
-        const diasMora = Math.ceil(Math.abs(fHoy - fReenganche) / (1000*60*60*24));
-        const tasaMora = parseFloat(document.getElementById('tasaMora').value) / 100;
+        if(!fInicioVal) return alert("Por favor seleccione la fecha de inicio del impago.");
+        if(!fReengancheVal) return alert("Por favor seleccione la fecha de reenganche o corte.");
+
+        const fInicio = new Date(fInicioVal + 'T00:00:00');
+        const fReenganche = new Date(fReengancheVal + 'T00:00:00');
+
+        if(fReenganche < fInicio) return alert("La fecha de corte no puede ser anterior a la de inicio.");
+
+        // 1. Días de ausencia laboral según LOTTT
+        const diffTime = fReenganche - fInicio;
+        const diasAusencia = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        const mesesAusencia = diasAusencia / 30;
+
+        // 2. Días de mora (por el retraso en el pago)
+        const diasMora = parseInt(document.getElementById('diasMoraInput').value) || 90;
+        const tasaMoraAnual = parseFloat(document.getElementById('tasaMora').value) / 100;
+
+        // Variables de ingreso
+        const salDiario = parseFloat(document.getElementById('salario').value);
+        const ctMensual = parseFloat(document.getElementById('ct').value);
+        const bonoWallet = parseFloat(document.getElementById('bono').value);
+
+        // Subtotales de la deuda principal
+        const subtotalSalarios = diasAusencia * salDiario;
+        const subtotalCT = mesesAusencia * ctMensual;
+        const subtotalWallet = mesesAusencia * bonoWallet;
+        const deudaPrincipalUSD = subtotalSalarios + subtotalCT + subtotalWallet;
+
+        // 3. Intereses de mora (Art. 92 LOTTT) aplicados a la deuda principal
+        const interesMoraUSD = deudaPrincipalUSD * tasaMoraAnual * (diasMora / 365);
+        const totalFinalUSD = deudaPrincipalUSD + interesMoraUSD;
 
         const data = [
-            { c: `Salarios Caídos (${diffDays} días)`, v: diffDays * parseFloat(document.getElementById('salario').value) },
-            { c: "Cesta Ticket Acumulado", v: meses * parseFloat(document.getElementById('ct').value) },
-            { c: "Bono de Guerra Económica", v: meses * parseFloat(document.getElementById('bono').value) }
+            { c: `Salarios Caídos (Art. 148/156 LOTTT - ${diasAusencia} días)`, v: subtotalSalarios },
+            { c: `Cesta Ticket Acumulado (${mesesAusencia.toFixed(2)} meses)`, v: subtotalCT },
+            { c: `Bono Wallet/Tienda (Sentencia 341 TSJ - ${mesesAusencia.toFixed(2)} meses)`, v: subtotalWallet },
+            { c: `SUBTOTAL DEUDA PRINCIPAL`, v: deudaPrincipalUSD, esSubtotal: true },
+            { c: `Intereses Moratorios por Incumplimiento (Art. 92 LOTTT - ${diasMora} días)`, v: interesMoraUSD }
         ];
 
-        let subtotalUSD = data.reduce((acc, item) => acc + item.v, 0);
-        let interesUSD = subtotalUSD * tasaMora * (diasMora / 365);
-        data.push({ c: `Intereses Moratorios (${diasMora} días)`, v: interesUSD });
-
-        let finalUSD = subtotalUSD + interesUSD;
-
-        // Renderizar Tabla
+        // Renderizar tabla
         const cuerpo = document.getElementById('cuerpoTabla');
         cuerpo.innerHTML = "";
         data.forEach(item => {
-            cuerpo.innerHTML += `<tr>
+            const claseFila = item.esSubtotal ? 'class="subtotal-row"' : '';
+            cuerpo.innerHTML += `<tr ${claseFila}>
                 <td>${item.c}</td>
-                <td>$ ${item.v.toLocaleString('en-US',{minimumFractionDigits:2})}</td>
-                <td>Bs. ${(item.v * tasa).toLocaleString('es-VE',{minimumFractionDigits:2})}</td>
+                <td>$ ${item.v.toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                <td>Bs. ${(item.v * tasa).toLocaleString('es-VE',{minimumFractionDigits:2, maximumFractionDigits:2})}</td>
             </tr>`;
         });
 
-        document.getElementById('totalUSD').innerText = `$ ${finalUSD.toLocaleString('en-US',{minimumFractionDigits:2})}`;
-        document.getElementById('totalVES').innerText = `Bs. ${(finalUSD * tasa).toLocaleString('es-VE',{minimumFractionDigits:2})}`;
+        document.getElementById('totalUSD').innerText = `$ ${totalFinalUSD.toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2})}`;
+        document.getElementById('totalVES').innerText = `Bs. ${(totalFinalUSD * tasa).toLocaleString('es-VE',{minimumFractionDigits:2, maximumFractionDigits:2})}`;
         
         document.getElementById('tablaResultados').style.display = 'table';
         document.getElementById('footerLegal').style.display = 'block';
